@@ -110,19 +110,6 @@
         -webkit-text-fill-color: transparent;
       }
 
-      .controls-panel {
-        background: var(--panel-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        padding: 16px;
-        border-radius: 16px;
-        pointer-events: auto;
-        display: flex;
-        gap: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      }
-
       .btn {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--glass-border);
@@ -757,27 +744,6 @@
                     ${filename || "Nenhum arquivo carregado"}
                   </p>
                 </div>
-                <div class="controls-panel">
-                  <button
-                    class="btn"
-                    onClick="${resetView}"
-                    title="Resetar Câmera"
-                  >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
-                      />
-                      <path d="M3 3v5h5" />
-                    </svg>
-                  </button>
-                </div>
               </div>
 
               <div style="display: flex; gap: 24px;">
@@ -811,6 +777,24 @@
                 `}
 
               <div class="hub-panel">
+                <button
+                  class="hub-btn"
+                  title="Centralizar Câmera"
+                  onClick="${resetView}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg>
+                </button>
                 <button
                   class="hub-btn ${showGrid ? "active" : ""}"
                   title="Grelha de Chão"
