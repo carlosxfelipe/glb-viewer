@@ -365,9 +365,7 @@
         const [isDragging, setIsDragging] = useState(false);
         const [meshes, setMeshes] = useState([]);
         const [filename, setFilename] = useState("");
-        const [autoRotate, setAutoRotate] = useState(false);
         const [showGrid, setShowGrid] = useState(true);
-        const [wireframe, setWireframe] = useState(false);
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -487,8 +485,7 @@
           );
           controls.enableDamping = true;
           controls.dampingFactor = 0.05;
-          controls.autoRotate = autoRotate;
-          controls.autoRotateSpeed = 2.0;
+          controls.zoomSpeed = 100.0;
           controlsRef.current = controls;
 
           // Expose helper to change grid visibility from outside
@@ -525,31 +522,10 @@
         }, []);
 
         useEffect(() => {
-          if (controlsRef.current) {
-            controlsRef.current.autoRotate = autoRotate;
-          }
-        }, [autoRotate]);
-
-        useEffect(() => {
           if (window._toggleGrid) {
             window._toggleGrid(showGrid);
           }
         }, [showGrid]);
-
-        useEffect(() => {
-          if (modelRef.current) {
-            modelRef.current.traverse((node) => {
-              if (node.isMesh && node.material) {
-                const materials = Array.isArray(node.material)
-                  ? node.material
-                  : [node.material];
-                materials.forEach((m) => {
-                  m.wireframe = wireframe;
-                });
-              }
-            });
-          }
-        }, [wireframe]);
 
         const loadModel = (fileOrUrl) => {
           const isUrl = typeof fileOrUrl === "string";
@@ -836,23 +812,6 @@
 
               <div class="hub-panel">
                 <button
-                  class="hub-btn ${autoRotate ? "active" : ""}"
-                  title="Auto Rotação"
-                  onClick="${() => setAutoRotate(!autoRotate)}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                    <path d="M21 3v5h-5" />
-                  </svg>
-                </button>
-                <button
                   class="hub-btn ${showGrid ? "active" : ""}"
                   title="Grelha de Chão"
                   onClick="${() => setShowGrid(!showGrid)}"
@@ -870,30 +829,6 @@
                     <line x1="3" y1="15" x2="21" y2="15" />
                     <line x1="9" y1="3" x2="9" y2="21" />
                     <line x1="15" y1="3" x2="15" y2="21" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn ${wireframe ? "active" : ""}"
-                  title="Modo Aramado (Wireframe)"
-                  onClick="${() => setWireframe(!wireframe)}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path d="M12 2l10 10-10 10-10-10z" />
-                    <path d="M12 2l-4 4" />
-                    <path d="M12 2l4 4" />
-                    <path d="M22 12l-4-4" />
-                    <path d="M22 12l-4 4" />
-                    <path d="M12 22l-4-4" />
-                    <path d="M12 22l4 4" />
-                    <path d="M2 12l4-4" />
-                    <path d="M2 12l4 4" />
                   </svg>
                 </button>
                 <button
