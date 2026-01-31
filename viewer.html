@@ -167,6 +167,17 @@
         z-index: 100;
       }
 
+      @media (max-width: 600px) {
+        .loader-info {
+          top: 50%;
+          left: 50%;
+          bottom: unset;
+          transform: translate(-50%, -50%);
+          border-radius: 24px;
+          padding: 18px 32px;
+        }
+      }
+
       .spinner {
         width: 16px;
         height: 16px;
@@ -569,7 +580,7 @@
           );
           controls.enableDamping = true;
           controls.dampingFactor = 0.05;
-          controls.zoomSpeed = 100.0;
+          controls.zoomSpeed = 10.0;
           controlsRef.current = controls;
 
           // Expose helper to change grid visibility from outside
