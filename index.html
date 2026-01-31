@@ -1,20 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D GLB Viewer - Simple & Modern</title>
+    <title>GLB Viewer - Menu Principal</title>
     <meta
       name="description"
-      content="Um visualizador GLB simples e elegante construído com Preact e Three.js"
+      content="Menu principal do visualizador GLB - Escolha entre diferentes visualizadores 3D"
     />
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap"
       rel="stylesheet"
     />
 
@@ -29,6 +29,7 @@
         --glass-border: rgba(255, 255, 255, 0.1);
         --title-gradient-1: #ffffff;
         --title-gradient-2: #94a3b8;
+        --card-hover: rgba(59, 130, 246, 0.1);
       }
 
       @media (prefers-color-scheme: light) {
@@ -41,6 +42,7 @@
           --glass-border: rgba(0, 0, 0, 0.1);
           --title-gradient-1: #0f172a;
           --title-gradient-2: #475569;
+          --card-hover: rgba(37, 99, 235, 0.1);
         }
       }
 
@@ -65,40 +67,25 @@
         height: 100%;
         display: flex;
         flex-direction: column;
-      }
-
-      #canvas-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-      }
-
-      /* UI Overlay */
-      .overlay {
-        position: relative;
-        z-index: 10;
-        pointer-events: none;
-        width: 100%;
-        height: 100%;
+        align-items: center;
+        justify-content: center;
         padding: 24px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+      }
+
+      .container {
+        max-width: 1200px;
+        width: 100%;
+        text-align: center;
       }
 
       .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        pointer-events: auto;
+        margin-bottom: 48px;
+        animation: fadeInDown 0.6s ease;
       }
 
-      .title-container h1 {
-        font-size: 1.5rem;
-        font-weight: 600;
+      .header h1 {
+        font-size: 3rem;
+        font-weight: 700;
         letter-spacing: -0.02em;
         background: linear-gradient(
           135deg,
@@ -108,168 +95,97 @@
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
+        margin-bottom: 12px;
       }
 
-      .drop-zone {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        max-width: 500px;
-        height: 300px;
-        border: 2px dashed var(--glass-border);
-        border-radius: 24px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.02);
-        transition: all 0.3s ease;
-        pointer-events: auto;
-        visibility: hidden;
-        opacity: 0;
-      }
-
-      .drop-zone.active {
-        visibility: visible;
-        opacity: 1;
-        border-color: var(--accent-color);
-        background: rgba(59, 130, 246, 0.05);
-        backdrop-filter: blur(4px);
-      }
-
-      .drop-zone h3 {
-        margin-bottom: 8px;
-        font-size: 1.25rem;
-      }
-
-      .drop-zone p {
+      .header p {
         color: var(--text-muted);
-        font-size: 0.95rem;
+        font-size: 1.1rem;
+        font-weight: 300;
       }
 
-      .loader-info {
-        position: absolute;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
+      .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        animation: fadeInUp 0.6s ease 0.2s both;
+      }
+
+      .menu-card {
         background: var(--panel-bg);
         backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        padding: 12px 24px;
-        border-radius: 100px;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        z-index: 100;
-      }
-
-      .spinner {
-        width: 16px;
-        height: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        border-top-color: var(--accent-color);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-
-      /* Hidden file input */
-      #file-input {
-        display: none;
-      }
-
-      .mesh-modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-        z-index: 200;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: auto;
-        animation: fadeIn 0.2s ease;
-      }
-
-      .mesh-modal {
-        width: 90%;
-        max-width: 400px;
-        max-height: 70vh;
-        background: var(--panel-bg);
-        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--glass-border);
         border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        animation: slideUp 0.3s ease;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .mesh-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--glass-border);
-      }
-
-      .mesh-modal-header h4 {
-        font-size: 1rem;
-        font-weight: 600;
-        margin: 0;
-      }
-
-      .mesh-modal-close {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(255, 255, 255, 0.1);
+        padding: 32px;
+        text-decoration: none;
         color: var(--text-color);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .menu-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--card-hover);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 0;
+      }
+
+      .menu-card:hover::before {
+        opacity: 1;
+      }
+
+      .menu-card:hover {
+        transform: translateY(-8px);
+        border-color: var(--accent-color);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .menu-card-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .menu-card-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s;
+        background: var(--accent-color);
+        border-radius: 16px;
+        transition: all 0.3s ease;
       }
 
-      .mesh-modal-close:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: scale(1.1);
+      .menu-card:hover .menu-card-icon {
+        transform: scale(1.1) rotate(5deg);
       }
 
-      .mesh-modal-content {
-        overflow-y: auto;
-        flex: 1;
+      .menu-card h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 12px;
       }
 
-      @keyframes fadeIn {
+      .menu-card p {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      @keyframes fadeInDown {
         from {
           opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
+          transform: translateY(-30px);
         }
         to {
           opacity: 1;
@@ -277,85 +193,43 @@
         }
       }
 
-      .mesh-item {
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        background: rgba(255, 255, 255, 0.03);
-        margin-bottom: 6px;
-        cursor: pointer;
-        transition: all 0.2s;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .mesh-item:hover {
-        background: rgba(255, 255, 255, 0.08);
-        padding-left: 16px;
-      }
-
-      .hub-panel {
-        position: absolute;
-        bottom: 24px;
-        right: 24px;
-        background: var(--panel-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        border-radius: 100px;
-        padding: 8px;
-        display: flex;
-        gap: 8px;
-        pointer-events: auto;
-        z-index: 100;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      }
-
-      .hub-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        border: none;
-        background: transparent;
-        color: var(--text-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s;
-        opacity: 0.7;
-      }
-
-      .hub-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        opacity: 1;
-        transform: scale(1.1);
-      }
-
-      .hub-btn.active {
-        background: var(--accent-color);
-        color: white;
-        opacity: 1;
-      }
-
-      .top-hub-panel {
-        background: var(--panel-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        border-radius: 100px;
-        padding: 8px;
-        pointer-events: auto;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      }
-
-      @media (prefers-color-scheme: light) {
-        .hub-btn:hover {
-          background: rgba(0, 0, 0, 0.05);
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
         }
-        .hub-btn.active {
-          color: white;
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .header p {
+          font-size: 1rem;
+        }
+
+        .menu-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 480px) {
+        .header {
+          margin-bottom: 32px;
+        }
+
+        .header h1 {
+          font-size: 1.75rem;
+        }
+
+        .menu-card {
+          padding: 24px;
         }
       }
     </style>
@@ -369,596 +243,107 @@
         "imports": {
           "preact": "https://esm.sh/preact@10.19.2",
           "preact/hooks": "https://esm.sh/preact@10.19.2/hooks",
-          "htm/preact": "https://esm.sh/htm@3.1.1/preact",
-          "three": "https://esm.sh/three@0.160.0",
-          "three/examples/jsm/controls/OrbitControls": "https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js",
-          "three/examples/jsm/loaders/GLTFLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
-          "three/examples/jsm/loaders/DRACOLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js",
-          "three/examples/jsm/environments/RoomEnvironment": "https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js",
-          "meshoptimizer": "https://esm.sh/meshoptimizer@0.21.0"
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact"
         }
       }
     </script>
 
     <script type="module">
       import { h, render } from "preact";
-      import { useEffect, useRef, useState } from "preact/hooks";
       import { html } from "htm/preact";
-      import * as THREE from "three";
-      import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-      import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-      import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
-      import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment";
-      import { MeshoptDecoder } from "meshoptimizer";
 
       function App() {
-        const mountRef = useRef(null);
-        const [isLoading, setIsLoading] = useState(false);
-        const [isDragging, setIsDragging] = useState(false);
-        const [meshes, setMeshes] = useState([]);
-        const [filename, setFilename] = useState("");
-        const [showGrid, setShowGrid] = useState(true);
-        const [showMeshList, setShowMeshList] = useState(false);
-
-        // Scene refs
-        const sceneRef = useRef(null);
-        const rendererRef = useRef(null);
-        const cameraRef = useRef(null);
-        const modelRef = useRef(null);
-        const controlsRef = useRef(null);
-
-        useEffect(() => {
-          // Theme Detection
-          const getThemeColors = () => {
-            const isLight =
-              window.matchMedia("(prefers-color-scheme: light)")
-                .matches;
-            return {
-              bg: isLight ? 0xf8fafc : 0x0f1115,
-              grid1: isLight ? 0xcbd5e1 : 0x334155,
-              grid2: isLight ? 0xe2e8f0 : 0x1e293b,
-            };
-          };
-
-          const theme = getThemeColors();
-
-          // Setup Three.js
-          const scene = new THREE.Scene();
-          scene.background = new THREE.Color(theme.bg);
-          sceneRef.current = scene;
-
-          const camera = new THREE.PerspectiveCamera(
-            45,
-            window.innerWidth / window.innerHeight,
-            0.01,
-            5000,
-          );
-          camera.position.set(5, 5, 5);
-          cameraRef.current = camera;
-
-          const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true,
-            logarithmicDepthBuffer: true,
-          });
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-          // Color Management
-          renderer.outputColorSpace = THREE.SRGBColorSpace;
-          renderer.toneMapping = THREE.ACESFilmicToneMapping;
-          renderer.toneMappingExposure = 0.8;
-
-          mountRef.current.appendChild(renderer.domElement);
-          rendererRef.current = renderer;
-
-          // Environment (Crucial for PBR materials/colors)
-          const pmremGenerator = new THREE.PMREMGenerator(renderer);
-          scene.environment = pmremGenerator.fromScene(
-            new RoomEnvironment(renderer),
-            0.04,
-          ).texture;
-
-          // Lights
-          const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-          scene.add(ambientLight);
-
-          const directLight = new THREE.DirectionalLight(0xffffff, 1.0);
-          directLight.position.set(5, 10, 7.5);
-          scene.add(directLight);
-
-          const hemisphereLight = new THREE.HemisphereLight(
-            0xffffff,
-            0x444444,
-            1.0,
-          );
-          scene.add(hemisphereLight);
-
-          // Grid Floor
-          let grid = new THREE.GridHelper(
-            20,
-            20,
-            theme.grid1,
-            theme.grid2,
-          );
-          grid.visible = showGrid;
-          scene.add(grid);
-
-          // Theme Listener
-          const mediaQuery = window.matchMedia(
-            "(prefers-color-scheme: light)",
-          );
-          const handleThemeChange = (e) => {
-            const isLight = e.matches;
-            const newColors = {
-              bg: isLight ? 0xf8fafc : 0x0f1115,
-              grid1: isLight ? 0xcbd5e1 : 0x334155,
-              grid2: isLight ? 0xe2e8f0 : 0x1e293b,
-            };
-
-            scene.background.set(newColors.bg);
-
-            // Replace grid
-            scene.remove(grid);
-            grid = new THREE.GridHelper(
-              20,
-              20,
-              newColors.grid1,
-              newColors.grid2,
-            );
-            grid.visible = showGrid;
-            scene.add(grid);
-          };
-          mediaQuery.addEventListener("change", handleThemeChange);
-
-          // Orbit Controls
-          const controls = new OrbitControls(
-            camera,
-            renderer.domElement,
-          );
-          controls.enableDamping = true;
-          controls.dampingFactor = 0.05;
-          controls.zoomSpeed = 100.0;
-          controlsRef.current = controls;
-
-          // Expose helper to change grid visibility from outside
-          window._toggleGrid = (val) => {
-            if (grid) grid.visible = val;
-          };
-
-          // Resize handler
-          const handleResize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-          };
-          window.addEventListener("resize", handleResize);
-
-          // Animation Loop
-          const animate = () => {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-          };
-          animate();
-
-          return () => {
-            window.removeEventListener("resize", handleResize);
-            mediaQuery.removeEventListener("change", handleThemeChange);
-            mountRef.current?.removeChild(renderer.domElement);
-          };
-        }, []);
-
-        useEffect(() => {
-          if (window._toggleGrid) {
-            window._toggleGrid(showGrid);
-          }
-        }, [showGrid]);
-
-        const loadModel = (file) => {
-          if (!file || !file.name.toLowerCase().endsWith(".glb")) {
-            alert("Por favor, selecione um arquivo .glb válido");
-            return;
-          }
-
-          setIsLoading(true);
-          setFilename(file.name);
-
-          // Clear previous model
-          if (modelRef.current) {
-            sceneRef.current.remove(modelRef.current);
-          }
-
-          const loader = new GLTFLoader();
-          const dracoLoader = new DRACOLoader();
-          dracoLoader.setDecoderPath(
-            "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
-          );
-          loader.setDRACOLoader(dracoLoader);
-          loader.setMeshoptDecoder(MeshoptDecoder);
-
-          const reader = new FileReader();
-          reader.readAsArrayBuffer(file);
-          reader.onload = (e) => {
-            loader.parse(
-              e.target.result,
-              "",
-              (gltf) => {
-                const model = gltf.scene;
-
-                // Center model
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-
-                model.position.x += model.position.x - center.x;
-                model.position.y += model.position.y - center.y;
-                model.position.z += model.position.z - center.z;
-
-                // Adjust position so it sits on the floor
-                model.position.y += size.y / 2;
-
-                const meshList = [];
-                model.traverse((node) => {
-                  if (node.isMesh) {
-                    node.frustumCulled = false;
-                    node.castShadow = true;
-                    node.receiveShadow = true;
-                    meshList.push({
-                      name: node.name ||
-                        `Desconhecido (${node.uuid.substring(0, 4)})`,
-                      uuid: node.uuid,
-                    });
-                  }
-                });
-
-                sceneRef.current.add(model);
-                modelRef.current = model;
-
-                // Update camera position to see the model
-                const maxDim = Math.max(size.x, size.y, size.z);
-                cameraRef.current.position.set(
-                  maxDim * 1.5,
-                  maxDim * 1.5,
-                  maxDim * 1.5,
-                );
-                controlsRef.current.target.set(0, size.y / 2, 0);
-
-                setMeshes(meshList);
-                setIsLoading(false);
-              },
-              (err) => {
-                console.error(err);
-                alert("Erro ao carregar o modelo");
-                setIsLoading(false);
-              },
-            );
-          };
-        };
-
-        const onDrop = (e) => {
-          e.preventDefault();
-          setIsDragging(false);
-          const file = e.dataTransfer.files[0];
-          loadModel(file);
-        };
-
-        const onDragOver = (e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        };
-
-        const onFileSelect = (e) => {
-          const file = e.target.files[0];
-          loadModel(file);
-        };
-
-        const focusMesh = (uuid) => {
-          if (!modelRef.current) return;
-
-          const object = modelRef.current.getObjectByProperty(
-            "uuid",
-            uuid,
-          );
-          if (object) {
-            const box = new THREE.Box3().setFromObject(object);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
-            const size = new THREE.Vector3();
-            box.getSize(size);
-
-            // Get distance needed to see the mesh
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = cameraRef.current.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-            cameraZ *= 2.5; // Add some padding
-
-            // Calculate new camera position
-            const offset = new THREE.Vector3(cameraZ, cameraZ, cameraZ);
-            const newPos = center.clone().add(offset);
-
-            // Set new state
-            cameraRef.current.position.copy(newPos);
-            controlsRef.current.target.copy(center);
-            controlsRef.current.update();
-
-            // Flash highlight effect (briefly)
-            const originalHex = [];
-            object.traverse((node) => {
-              if (node.isMesh && node.material) {
-                const materials = Array.isArray(node.material)
-                  ? node.material
-                  : [node.material];
-                materials.forEach((m) => {
-                  if (m.emissive) {
-                    originalHex.push({
-                      mat: m,
-                      color: m.emissive.getHex(),
-                    });
-                    m.emissive.setHex(0x3b82f6);
-                  }
-                });
-              }
-            });
-
-            setTimeout(() => {
-              originalHex.forEach((item) => {
-                item.mat.emissive.setHex(item.color);
-              });
-            }, 500);
-          }
-        };
-
-        const resetView = () => {
-          if (!modelRef.current) return;
-          const box = new THREE.Box3().setFromObject(modelRef.current);
-          const center = new THREE.Vector3();
-          box.getCenter(center);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-
-          const maxDim = Math.max(size.x, size.y, size.z);
-          cameraRef.current.position.set(
-            maxDim * 1.5,
-            maxDim * 1.5,
-            maxDim * 1.5,
-          );
-          controlsRef.current.target.set(0, size.y / 2, 0);
-          controlsRef.current.update();
-        };
-
-        const takeScreenshot = () => {
-          if (
-            !rendererRef.current || !sceneRef.current ||
-            !cameraRef.current
-          ) {
-            return;
-          }
-
-          // Render one frame for the screenshot
-          rendererRef.current.render(
-            sceneRef.current,
-            cameraRef.current,
-          );
-
-          const link = document.createElement("a");
-          link.setAttribute("download", `${filename || "model"}.png`);
-          link.setAttribute(
-            "href",
-            rendererRef.current.domElement
-              .toDataURL("image/png")
-              .replace("image/png", "image/octet-stream"),
-          );
-          link.click();
-        };
+        const menuItems = [
+          {
+            title: "GLB Viewer",
+            description:
+              "Visualizador universal de arquivos GLB com suporte a drag-and-drop",
+            link: "viewer.html",
+            icon: html`
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            `,
+          },
+          {
+            title: "Toy Car",
+            description: "Visualize o modelo 3D do carrinho de brinquedo",
+            link: "toy-car.html",
+            icon: html`
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 17h14v-5H5v5z" />
+                <path
+                  d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l3-3h6l3 3h3a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"
+                />
+                <circle cx="7" cy="17" r="2" />
+                <circle cx="17" cy="17" r="2" />
+              </svg>
+            `,
+          },
+          {
+            title: "Dungeon Warkarma",
+            description: "Explore o modelo 3D do cenário de dungeon",
+            link: "dungeon-warkarma.html",
+            icon: html`
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+            `,
+          },
+        ];
 
         return html`
-          <div
-            onDrop="${onDrop}"
-            onDragOver="${onDragOver}"
-            onDragLeave="${() => setIsDragging(false)}"
-            style="width: 100%; height: 100%;"
-          >
-            <div ref="${mountRef}" id="canvas-container"></div>
+          <div class="container">
+            <div class="header">
+              <h1>GLB Viewer</h1>
+              <p>Escolha um visualizador 3D para começar</p>
+            </div>
 
-            <div class="overlay">
-              <div class="header">
-                <div class="title-container">
-                  <h1>GLB Viewer</h1>
-                  <p style="color: var(--text-muted); font-size: 0.8rem;">
-                    ${filename || "Nenhum arquivo carregado"}
-                  </p>
-                </div>
-                <div class="top-hub-panel">
-                  <button
-                    class="hub-btn"
-                    onClick="${() =>
-                      document.getElementById("file-input").click()}"
-                    title="Abrir arquivo GLB"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  id="file-input"
-                  accept=".glb"
-                  onChange="${onFileSelect}"
-                />
-              </div>
-
-              ${meshes.length > 0 && showMeshList &&
-                html`
-                  <div
-                    class="mesh-modal-backdrop"
-                    onClick="${() => setShowMeshList(false)}"
-                  >
-                    <div
-                      class="mesh-modal"
-                      onClick="${(e) => e.stopPropagation()}"
-                    >
-                      <div class="mesh-modal-header">
-                        <h4>Objetos na Cena (${meshes.length})</h4>
-                        <button
-                          class="mesh-modal-close"
-                          onClick="${() => setShowMeshList(false)}"
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div class="mesh-modal-content">
-                        ${meshes.map(
-                          (m) =>
-                            html`
-                              <div
-                                class="mesh-item"
-                                key="${m.uuid}"
-                                title="Clique para focar em ${m.name}"
-                                onClick="${() => {
-                                  focusMesh(m.uuid);
-                                  setShowMeshList(false);
-                                }}"
-                              >
-                                ${m.name}
-                              </div>
-                            `,
-                        )}
-                      </div>
+            <div class="menu-grid">
+              ${menuItems.map(
+                (item) => html`
+                  <a href="${item.link}" class="menu-card" key="${item.link}">
+                    <div class="menu-card-content">
+                      <div class="menu-card-icon">${item.icon}</div>
+                      <h2>${item.title}</h2>
+                      <p>${item.description}</p>
                     </div>
-                  </div>
-                `}
-
-              <div class="drop-zone ${isDragging ? "active" : ""}">
-                <svg
-                  width="60"
-                  height="60"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent-color)"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  style="margin-bottom: 20px;"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                <h3>Solte o arquivo GLB aqui</h3>
-                <p>Arraste e solte para visualizar instantaneamente</p>
-              </div>
-
-              ${isLoading &&
-                html`
-                  <div class="loader-info">
-                    <div class="spinner"></div>
-                    <span>Carregando modelo...</span>
-                  </div>
-                `}
-
-              <div class="hub-panel">
-                <button
-                  class="hub-btn"
-                  title="Centralizar Câmera"
-                  onClick="${resetView}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <circle cx="12" cy="12" r="6" />
-                    <circle cx="12" cy="12" r="2" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn ${showGrid ? "active" : ""}"
-                  title="Grelha de Chão"
-                  onClick="${() => setShowGrid(!showGrid)}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="3" y1="9" x2="21" y2="9" />
-                    <line x1="3" y1="15" x2="21" y2="15" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                    <line x1="15" y1="3" x2="15" y2="21" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn ${showMeshList ? "active" : ""}"
-                  title="Objetos na Cena"
-                  onClick="${() => setShowMeshList(!showMeshList)}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn"
-                  title="Capturar Foto"
-                  onClick="${takeScreenshot}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <path
-                      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
-                    />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                </button>
-              </div>
+                  </a>
+                `,
+              )}
             </div>
           </div>
         `;
