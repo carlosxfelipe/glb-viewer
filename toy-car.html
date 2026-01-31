@@ -369,6 +369,57 @@
         opacity: 1;
       }
 
+      /* Tooltip styles */
+      .hub-btn {
+        position: relative;
+      }
+
+      .hub-btn::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 50%;
+        transform: translateX(-50%) translateY(4px);
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        color: var(--text-color);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.2s ease;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .hub-btn::after {
+        content: "";
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: var(--panel-bg);
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.2s ease;
+        z-index: 1000;
+      }
+
+      .hub-btn:hover::before {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .hub-btn:hover::after {
+        opacity: 1;
+      }
+
       @media (prefers-color-scheme: light) {
         .hub-btn:hover {
           background: rgba(0, 0, 0, 0.05);
@@ -873,7 +924,7 @@
               <div class="hub-panel">
                 <button
                   class="hub-btn"
-                  title="Centralizar Câmera"
+                  data-tooltip="Centralizar Câmera"
                   onClick="${resetView}"
                 >
                   <svg
@@ -891,7 +942,7 @@
                 </button>
                 <button
                   class="hub-btn ${showGrid ? "active" : ""}"
-                  title="Grelha de Chão"
+                  data-tooltip="Grelha de Chão"
                   onClick="${() => setShowGrid(!showGrid)}"
                 >
                   <svg
@@ -911,7 +962,7 @@
                 </button>
                 <button
                   class="hub-btn ${showMeshList ? "active" : ""}"
-                  title="Objetos na Cena"
+                  data-tooltip="Objetos na Cena"
                   onClick="${() => setShowMeshList(!showMeshList)}"
                 >
                   <svg
@@ -930,7 +981,7 @@
                 </button>
                 <button
                   class="hub-btn"
-                  title="Capturar Foto"
+                  data-tooltip="Capturar Foto"
                   onClick="${takeScreenshot}"
                 >
                   <svg
