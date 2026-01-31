@@ -13,3 +13,4 @@ npx serve
 Os modelos GLB foram obtidos em:
 
 - [ohzinteractive/glb-viewer-web - public/models](https://github.com/ohzinteractive/glb-viewer-web/tree/main/public/models)
+- [mrdoob/three.js - examples/models/gltf](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf)
