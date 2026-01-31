@@ -632,8 +632,10 @@
         }, []);
 
         // Load specific model on mount
+        const modelPath = "public/models/toy_car.glb";
+
         useEffect(() => {
-          loadModel("public/models/toy_car.glb");
+          loadModel(modelPath);
         }, []);
 
         useEffect(() => {

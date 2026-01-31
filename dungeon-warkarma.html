@@ -632,8 +632,10 @@
         }, []);
 
         // Load specific model on mount
+        const modelPath = "public/models/dungeon_warkarma.glb";
+
         useEffect(() => {
-          loadModel("public/models/dungeon_warkarma.glb");
+          loadModel(modelPath);
         }, []);
 
         useEffect(() => {
