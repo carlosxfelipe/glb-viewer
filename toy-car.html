@@ -217,25 +217,94 @@
         display: none;
       }
 
-      .mesh-list-panel {
-        width: 280px;
-        max-height: 60vh;
-        overflow-y: auto;
+      .mesh-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+        animation: fadeIn 0.2s ease;
+      }
+
+      .mesh-modal {
+        width: 90%;
+        max-width: 400px;
+        max-height: 70vh;
         background: var(--panel-bg);
         backdrop-filter: blur(12px);
         border: 1px solid var(--glass-border);
         border-radius: 20px;
-        padding: 20px;
-        pointer-events: auto;
-        margin-top: 20px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.3s ease;
+        display: flex;
+        flex-direction: column;
       }
 
-      .mesh-list-panel h4 {
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-muted);
+      .mesh-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--glass-border);
+      }
+
+      .mesh-modal-header h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .mesh-modal-close {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .mesh-modal-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+      }
+
+      .mesh-modal-content {
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .mesh-item {
@@ -306,11 +375,6 @@
         }
         .hub-btn.active {
           color: white;
-        }
-      }
-      @media (max-width: 768px) {
-        .hub-panel {
-          display: none;
         }
       }
     </style>
@@ -747,29 +811,58 @@
                 </div>
               </div>
 
-              <div style="display: flex; gap: 24px;">
-                ${meshes.length > 0 && showMeshList &&
-                  html`
-                    <div class="mesh-list-panel">
-                      <h4>Objetos na Cena (${meshes.length})</h4>
-                      ${meshes.map(
-                        (m) =>
-                          html`
-                            <div
-                              class="mesh-item"
-                              key="${m.uuid}"
-                              title="Clique para focar em ${m.name}"
-                              onClick="${() => focusMesh(m.uuid)}"
-                            >
-                              ${m.name}
-                            </div>
-                          `,
-                      )}
+              ${meshes.length > 0 && showMeshList &&
+                html`
+                  <div
+                    class="mesh-modal-backdrop"
+                    onClick="${() => setShowMeshList(false)}"
+                  >
+                    <div
+                      class="mesh-modal"
+                      onClick="${(e) => e.stopPropagation()}"
+                    >
+                      <div class="mesh-modal-header">
+                        <h4>Objetos na Cena (${meshes.length})</h4>
+                        <button
+                          class="mesh-modal-close"
+                          onClick="${() => setShowMeshList(false)}"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="mesh-modal-content">
+                        ${meshes.map(
+                          (m) =>
+                            html`
+                              <div
+                                class="mesh-item"
+                                key="${m.uuid}"
+                                title="Clique para focar em ${m.name}"
+                                onClick="${() => {
+                                  focusMesh(m.uuid);
+                                  setShowMeshList(false);
+                                }}"
+                              >
+                                ${m.name}
+                              </div>
+                            `,
+                        )}
+                      </div>
                     </div>
-                  `}
-              </div>
-
-              ${isLoading &&
+                  </div>
+                `} ${isLoading &&
                 html`
                   <div class="loader-info">
                     <div class="spinner"></div>
