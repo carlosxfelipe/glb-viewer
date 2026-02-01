@@ -1,8 +1,11 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>GLB Viewer - Menu Principal</title>
     <meta
       name="description"
@@ -280,7 +283,8 @@
           },
           {
             title: "Toy Car",
-            description: "Visualize o modelo 3D do carrinho de brinquedo",
+            description:
+              "Visualize o modelo 3D do carrinho de brinquedo",
             link: "toy-car.html",
             icon: html`
               <svg
@@ -333,15 +337,17 @@
 
             <div class="menu-grid">
               ${menuItems.map(
-                (item) => html`
-                  <a href="${item.link}" class="menu-card" key="${item.link}">
-                    <div class="menu-card-content">
-                      <div class="menu-card-icon">${item.icon}</div>
-                      <h2>${item.title}</h2>
-                      <p>${item.description}</p>
-                    </div>
-                  </a>
-                `,
+                (item) =>
+                  html`
+                    <a href="${item.link}" class="menu-card" key="${item
+                      .link}">
+                      <div class="menu-card-content">
+                        <div class="menu-card-icon">${item.icon}</div>
+                        <h2>${item.title}</h2>
+                        <p>${item.description}</p>
+                      </div>
+                    </a>
+                  `,
               )}
             </div>
           </div>
