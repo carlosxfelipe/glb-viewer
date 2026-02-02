@@ -635,10 +635,25 @@
         }, []);
 
         // Load specific model on mount
-        const modelPath = "public/models/opt/fast-toy_car.glb";
+        const MODEL_PATHS = {
+          desktop: "public/models/opt/fast-toy_car.glb",
+          mobile: "public/models/mobile/fast-toy_car.glb",
+        };
 
         useEffect(() => {
-          loadModel(modelPath);
+          const isMobile =
+            window.matchMedia("(max-width: 768px)").matches;
+
+          const targetPath = isMobile
+            ? MODEL_PATHS.mobile
+            : MODEL_PATHS.desktop;
+          console.log(
+            `[Device Detection] Loading ${
+              isMobile ? "Mobile" : "Desktop"
+            } model: ${targetPath}`,
+          );
+
+          loadModel(targetPath);
         }, []);
 
         useEffect(() => {
