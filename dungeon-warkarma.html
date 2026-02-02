@@ -490,9 +490,9 @@
         useEffect(() => {
           // Theme Detection
           const getThemeColors = () => {
-            const isLight =
-              window.matchMedia("(prefers-color-scheme: light)")
-                .matches;
+            const isLight = window.matchMedia(
+              "(prefers-color-scheme: light)",
+            ).matches;
             return {
               bg: isLight ? 0xf8fafc : 0x0f1115,
               grid1: isLight ? 0xcbd5e1 : 0x334155,
@@ -598,7 +598,7 @@
           );
           controls.enableDamping = true;
           controls.dampingFactor = 0.05;
-          controls.zoomSpeed = 10.0;
+          controls.zoomSpeed = 1.0;
           controlsRef.current = controls;
 
           // Expose helper to change grid visibility from outside
@@ -630,10 +630,18 @@
         }, []);
 
         // Load specific model on mount
-        const modelPath = "public/models/opt/fast-dungeon_warkarma.glb";
+        const MODEL_PATHS = {
+          desktop: "public/models/opt/fast-dungeon_warkarma.glb",
+          mobile: "public/models/opt/fast-dungeon_warkarma.glb",
+        };
 
         useEffect(() => {
-          loadModel(modelPath);
+          const isMobile = window.matchMedia("(max-width: 768px)").matches;
+          
+          const targetPath = isMobile ? MODEL_PATHS.mobile : MODEL_PATHS.desktop;
+          console.log(`[Device Detection] Loading ${isMobile ? 'Mobile' : 'Desktop'} model: ${targetPath}`);
+          
+          loadModel(targetPath);
         }, []);
 
         useEffect(() => {
@@ -688,13 +696,11 @@
             model.position.y += size.y / 2;
 
             const filteredMeshNames = {
-              "Wall_Windows001_Wall_Dark_White_0": "Entrada da Dungeon",
-              "Wall_Windows003_Wall_Dark_White_0":
-                "2ª Parte da Dungeon",
-              "Column021_Wall_Dark_Blue_0": "Sala do Trono",
-              "Wall_Windows006_Wall_Dark_Blue_0":
-                "Após a Sala do Trono",
-              "Column025_Wall_Dark_Blue_0": "Tesouro Final da Dungeon",
+              Wall_Windows001_Wall_Dark_White_0: "Entrada da Dungeon",
+              Wall_Windows003_Wall_Dark_White_0: "2ª Parte da Dungeon",
+              Column021_Wall_Dark_Blue_0: "Sala do Trono",
+              Wall_Windows006_Wall_Dark_Blue_0: "Após a Sala do Trono",
+              Column025_Wall_Dark_Blue_0: "Tesouro Final da Dungeon",
             };
 
             const meshList = [];
@@ -811,7 +817,7 @@
                       mat: m,
                       color: m.emissive.getHex(),
                     });
-                    m.emissive.setHex(0xE61E25);
+                    m.emissive.setHex(0xe61e25);
                   }
                 });
               }
@@ -887,7 +893,8 @@
                 </div>
               </div>
 
-              ${meshes.length > 0 && showMeshList &&
+              ${meshes.length > 0 &&
+                showMeshList &&
                 html`
                   <div
                     class="mesh-modal-backdrop"

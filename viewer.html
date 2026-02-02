@@ -2,7 +2,10 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>GLB Viewer</title>
     <meta
       name="description"
@@ -473,9 +476,9 @@
         useEffect(() => {
           // Theme Detection
           const getThemeColors = () => {
-            const isLight =
-              window.matchMedia("(prefers-color-scheme: light)")
-                .matches;
+            const isLight = window.matchMedia(
+              "(prefers-color-scheme: light)",
+            ).matches;
             return {
               bg: isLight ? 0xf8fafc : 0x0f1115,
               grid1: isLight ? 0xcbd5e1 : 0x334155,
@@ -581,7 +584,7 @@
           );
           controls.enableDamping = true;
           controls.dampingFactor = 0.05;
-          controls.zoomSpeed = 10.0;
+          controls.zoomSpeed = 1.0;
           controlsRef.current = controls;
 
           // Expose helper to change grid visibility from outside
@@ -864,7 +867,8 @@
                 />
               </div>
 
-              ${meshes.length > 0 && showMeshList &&
+              ${meshes.length > 0 &&
+                showMeshList &&
                 html`
                   <div
                     class="mesh-modal-backdrop"
