@@ -687,29 +687,17 @@
             // Adjust position so it sits on the floor
             model.position.y += size.y / 2;
 
-            const filteredMeshNames = {
-              "Wall_Windows001_Wall_Dark_White_0": "Entrada da Dungeon",
-              "Wall_Windows003_Wall_Dark_White_0":
-                "2ª Parte da Dungeon",
-              "Column021_Wall_Dark_Blue_0": "Sala do Trono",
-              "Wall_Windows006_Wall_Dark_Blue_0":
-                "Após a Sala do Trono",
-              "Column025_Wall_Dark_Blue_0": "Tesouro Final da Dungeon",
-            };
-
             const meshList = [];
             model.traverse((node) => {
               if (node.isMesh) {
                 node.frustumCulled = false;
                 node.castShadow = true;
                 node.receiveShadow = true;
-
-                if (filteredMeshNames[node.name]) {
-                  meshList.push({
-                    name: filteredMeshNames[node.name],
-                    uuid: node.uuid,
-                  });
-                }
+                meshList.push({
+                  name: node.name ||
+                    `Desconhecido (${node.uuid.substring(0, 4)})`,
+                  uuid: node.uuid,
+                });
               }
             });
 
