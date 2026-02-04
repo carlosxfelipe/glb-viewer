@@ -442,6 +442,7 @@
           "three/examples/jsm/loaders/DRACOLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js",
           "three/examples/jsm/loaders/KTX2Loader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/KTX2Loader.js",
           "three/examples/jsm/environments/RoomEnvironment": "https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js",
+          "three/examples/jsm/libs/stats.module": "https://esm.sh/three@0.160.0/examples/jsm/libs/stats.module.js",
           "meshoptimizer": "https://esm.sh/meshoptimizer@0.21.0"
         }
       }
@@ -457,6 +458,7 @@
       import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
       import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader";
       import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment";
+      import Stats from "three/examples/jsm/libs/stats.module";
       import { MeshoptDecoder } from "meshoptimizer";
 
       function App() {
@@ -472,6 +474,7 @@
           false,
         );
         const [currentAnimation, setCurrentAnimation] = useState(null);
+        const [showStats, setShowStats] = useState(false);
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -481,6 +484,7 @@
         const controlsRef = useRef(null);
         const mixerRef = useRef(null);
         const activeActionRef = useRef(null);
+        const statsRef = useRef(null);
 
         useEffect(() => {
           // Theme Detection
@@ -601,6 +605,17 @@
             if (grid) grid.visible = val;
           };
 
+          // Stats Setup
+          const stats = new Stats();
+          stats.dom.style.position = "absolute";
+          stats.dom.style.top = "auto";
+          stats.dom.style.bottom = "24px";
+          stats.dom.style.left = "24px";
+          stats.dom.style.zIndex = "100";
+          stats.dom.style.display = showStats ? "block" : "none";
+          document.body.appendChild(stats.dom);
+          statsRef.current = stats;
+
           // Resize handler
           const handleResize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -616,6 +631,7 @@
             const delta = clock.getDelta();
             if (mixerRef.current) mixerRef.current.update(delta);
             controls.update();
+            if (statsRef.current) statsRef.current.update();
             renderer.render(scene, camera);
           };
           animate();
@@ -624,6 +640,9 @@
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
             mountRef.current?.removeChild(renderer.domElement);
+            if (statsRef.current) {
+              document.body.removeChild(statsRef.current.dom);
+            }
           };
         }, []);
 
@@ -632,6 +651,14 @@
             window._toggleGrid(showGrid);
           }
         }, [showGrid]);
+
+        useEffect(() => {
+          if (statsRef.current) {
+            statsRef.current.dom.style.display = showStats
+              ? "block"
+              : "none";
+          }
+        }, [showStats]);
 
         const loadModel = (file) => {
           if (!file || !file.name.toLowerCase().endsWith(".glb")) {
@@ -1169,6 +1196,26 @@
                     stroke-linejoin="round"
                   >
                     <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn ${showStats ? "active" : ""}"
+                  data-tooltip="Desempenho (FPS)"
+                  onClick="${() => setShowStats(!showStats)}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
                   </svg>
                 </button>
                 <button
