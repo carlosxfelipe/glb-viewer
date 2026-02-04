@@ -757,20 +757,41 @@
             const meshList = [];
             const seenByName = new Set();
 
+            // Safe check: set metaData to null if filteredMeshMeta is not defined
+            let metaData = null;
+            try {
+              metaData = filteredMeshMeta;
+            } catch (e) {
+              // Variable doesn't exist or was renamed (fallback will be triggered)
+            }
+
+            const isFilterActive =
+              metaData && Object.keys(metaData).length > 0;
+
             model.traverse((node) => {
               if (node.isMesh) {
-                node.frustumCulled = true;
                 node.castShadow = true;
                 node.receiveShadow = true;
 
-                const meta = filteredMeshMeta[node.name];
-                if (meta && !seenByName.has(node.name)) {
-                  seenByName.add(node.name);
+                const meta = isFilterActive ? metaData[node.name] : null;
+
+                if (meta) {
+                  if (!seenByName.has(node.name)) {
+                    seenByName.add(node.name);
+                    meshList.push({
+                      key: node.name,
+                      name: meta.name,
+                      description: meta.description,
+                      uuid: node.uuid,
+                    });
+                  }
+                } else if (!isFilterActive) {
+                  // Fallback: If no filter is active, add the mesh with its original name
                   meshList.push({
-                    key: node.name,
-                    name: meta.name,
-                    description: meta.description,
+                    name: node.name ||
+                      `Desconhecido (${node.uuid.substring(0, 4)})`,
                     uuid: node.uuid,
+                    description: "Sem descrição disponível.",
                   });
                 }
               }
@@ -1024,15 +1045,15 @@
                       background: var(--panel-bg);
                       border: 1px solid var(--glass-border);
                       border-radius: 16px; padding: 14px 16px;
-                      pointer-events: auto; max-width: 320px;
+                      pointer-events: auto; max-width: min(400px, calc(100vw - 48px));
                       backdrop-filter: blur(12px);
                       box-shadow: 0 8px 32px rgba(0,0,0,0.3);"
                     >
                       <div
                         style="display:flex; align-items:flex-start; gap:10px;"
                       >
-                        <div style="flex:1;">
-                          <div style="font-weight:600; margin-bottom:6px;">
+                        <div style="flex:1; min-width: 0;">
+                          <div style="font-weight:600; margin-bottom:6px; overflow-wrap: break-word;">
                             ${focusedInfo.name}
                           </div>
                           <div
