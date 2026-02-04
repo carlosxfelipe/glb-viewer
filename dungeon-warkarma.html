@@ -479,6 +479,7 @@
         const [filename, setFilename] = useState("");
         const [showGrid, setShowGrid] = useState(true);
         const [showMeshList, setShowMeshList] = useState(true);
+        const [focusedInfo, setFocusedInfo] = useState(null);
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -636,11 +637,18 @@
         };
 
         useEffect(() => {
-          const isMobile = window.matchMedia("(max-width: 768px)").matches;
-          
-          const targetPath = isMobile ? MODEL_PATHS.mobile : MODEL_PATHS.desktop;
-          console.log(`[Device Detection] Loading ${isMobile ? 'Mobile' : 'Desktop'} model: ${targetPath}`);
-          
+          const isMobile =
+            window.matchMedia("(max-width: 768px)").matches;
+
+          const targetPath = isMobile
+            ? MODEL_PATHS.mobile
+            : MODEL_PATHS.desktop;
+          console.log(
+            `[Device Detection] Loading ${
+              isMobile ? "Mobile" : "Desktop"
+            } model: ${targetPath}`,
+          );
+
           loadModel(targetPath);
         }, []);
 
@@ -667,8 +675,18 @@
             isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name,
           );
 
-          // Clear previous model
+          // Clear previous model and free memory
           if (modelRef.current) {
+            modelRef.current.traverse((node) => {
+              if (node.isMesh) {
+                node.geometry.dispose();
+                if (Array.isArray(node.material)) {
+                  node.material.forEach((m) => m.dispose());
+                } else {
+                  node.material.dispose();
+                }
+              }
+            });
             sceneRef.current.remove(modelRef.current);
           }
 
@@ -695,24 +713,48 @@
             // Adjust position so it sits on the floor
             model.position.y += size.y / 2;
 
-            const filteredMeshNames = {
-              Wall_Windows001_Wall_Dark_White_0: "Entrada da Dungeon",
-              Wall_Windows003_Wall_Dark_White_0: "2ª Parte da Dungeon",
-              Column021_Wall_Dark_Blue_0: "Sala do Trono",
-              Wall_Windows006_Wall_Dark_Blue_0: "Após a Sala do Trono",
-              Column025_Wall_Dark_Blue_0: "Tesouro Final da Dungeon",
+            const filteredMeshMeta = {
+              Wall_Windows001_Wall_Dark_White_0: {
+                name: "Entrada da Dungeon",
+                description: "Área inicial de acesso à dungeon.",
+              },
+              Wall_Windows003_Wall_Dark_White_0: {
+                name: "2ª Parte da Dungeon",
+                description: "Uma reta principal que leva diretamente à Sala do Chefão.",
+              },
+              Column021_Wall_Dark_Blue_0: {
+                name: "Sala do Chefão",
+                description:
+                  "Grande salão cerimonial onde reside o guardião esquelético da dungeon.",
+              },
+              Wall_Windows006_Wall_Dark_Blue_0: {
+                name: "Após a Sala do Chefão",
+                description:
+                  "Área de logística e suprimentos contendo diversos barris e caixotes de madeira.",
+              },
+              Column025_Wall_Dark_Blue_0: {
+                name: "Tesouro Final da Dungeon",
+                description:
+                  "Câmara guardada que contém as relíquias mais valiosas.",
+              },
             };
 
             const meshList = [];
+            const seenByName = new Set();
+
             model.traverse((node) => {
               if (node.isMesh) {
-                node.frustumCulled = false;
+                node.frustumCulled = true;
                 node.castShadow = true;
                 node.receiveShadow = true;
 
-                if (filteredMeshNames[node.name]) {
+                const meta = filteredMeshMeta[node.name];
+                if (meta && !seenByName.has(node.name)) {
+                  seenByName.add(node.name);
                   meshList.push({
-                    name: filteredMeshNames[node.name],
+                    key: node.name,
+                    name: meta.name,
+                    description: meta.description,
                     uuid: node.uuid,
                   });
                 }
@@ -803,6 +845,15 @@
             cameraRef.current.position.copy(newPos);
             controlsRef.current.target.copy(center);
             controlsRef.current.update();
+
+            // Update focused metadata
+            const clicked = meshes.find((x) => x.uuid === uuid);
+            if (clicked) {
+              setFocusedInfo({
+                name: clicked.name,
+                description: clicked.description,
+              });
+            }
 
             // Flash highlight effect (briefly)
             const originalHex = [];
@@ -951,92 +1002,138 @@
                     <div class="spinner"></div>
                     <span>Carregando modelo...</span>
                   </div>
-                `}
+                `} ${focusedInfo &&
+                html`
+                  <div
+                    style="position:absolute; bottom:90px; right:24px;
+                      background: var(--panel-bg);
+                      border: 1px solid var(--glass-border);
+                      border-radius: 16px; padding: 14px 16px;
+                      pointer-events: auto; max-width: 320px;
+                      backdrop-filter: blur(12px);
+                      box-shadow: 0 8px 32px rgba(0,0,0,0.3);"
+                    >
+                      <div
+                        style="display:flex; align-items:flex-start; gap:10px;"
+                      >
+                        <div style="flex:1;">
+                          <div style="font-weight:600; margin-bottom:6px;">
+                            ${focusedInfo.name}
+                          </div>
+                          <div
+                            style="font-size:0.9rem; color:var(--text-muted); line-height:1.35;"
+                          >
+                            ${focusedInfo.description}
+                          </div>
+                        </div>
+                        <button
+                          class="mesh-modal-close"
+                          onClick="${() => setFocusedInfo(null)}"
+                          title="Fechar"
+                          style="margin-left:6px;"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  `}
 
-              <div class="hub-panel">
-                <button
-                  class="hub-btn"
-                  data-tooltip="Centralizar Câmera"
-                  onClick="${resetView}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
+                <div class="hub-panel">
+                  <button
+                    class="hub-btn"
+                    data-tooltip="Centralizar Câmera"
+                    onClick="${resetView}"
                   >
-                    <circle cx="12" cy="12" r="10" />
-                    <circle cx="12" cy="12" r="6" />
-                    <circle cx="12" cy="12" r="2" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn ${showGrid ? "active" : ""}"
-                  data-tooltip="Grelha de Chão"
-                  onClick="${() => setShowGrid(!showGrid)}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="6" />
+                      <circle cx="12" cy="12" r="2" />
+                    </svg>
+                  </button>
+                  <button
+                    class="hub-btn ${showGrid ? "active" : ""}"
+                    data-tooltip="Grelha de Chão"
+                    onClick="${() => setShowGrid(!showGrid)}"
                   >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="3" y1="9" x2="21" y2="9" />
-                    <line x1="3" y1="15" x2="21" y2="15" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                    <line x1="15" y1="3" x2="15" y2="21" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn ${showMeshList ? "active" : ""}"
-                  data-tooltip="Objetos na Cena"
-                  onClick="${() => setShowMeshList(!showMeshList)}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <line x1="3" y1="9" x2="21" y2="9" />
+                      <line x1="3" y1="15" x2="21" y2="15" />
+                      <line x1="9" y1="3" x2="9" y2="21" />
+                      <line x1="15" y1="3" x2="15" y2="21" />
+                    </svg>
+                  </button>
+                  <button
+                    class="hub-btn ${showMeshList ? "active" : ""}"
+                    data-tooltip="Objetos na Cena"
+                    onClick="${() => setShowMeshList(!showMeshList)}"
                   >
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                  </svg>
-                </button>
-                <button
-                  class="hub-btn"
-                  data-tooltip="Capturar Foto"
-                  onClick="${takeScreenshot}"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <line x1="9" y1="3" x2="9" y2="21" />
+                    </svg>
+                  </button>
+                  <button
+                    class="hub-btn"
+                    data-tooltip="Capturar Foto"
+                    onClick="${takeScreenshot}"
                   >
-                    <path
-                      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
-                    />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                </button>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                      />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        `;
-      }
+          `;
+        }
 
-      render(h(App), document.getElementById("app"));
+        render(h(App), document.getElementById("app"));
     </script>
   </body>
 </html>

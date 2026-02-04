@@ -679,8 +679,18 @@
             isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name,
           );
 
-          // Clear previous model
+          // Clear previous model and free memory
           if (modelRef.current) {
+            modelRef.current.traverse((node) => {
+              if (node.isMesh) {
+                node.geometry.dispose();
+                if (Array.isArray(node.material)) {
+                  node.material.forEach((m) => m.dispose());
+                } else {
+                  node.material.dispose();
+                }
+              }
+            });
             sceneRef.current.remove(modelRef.current);
           }
 
@@ -710,7 +720,7 @@
             const meshList = [];
             model.traverse((node) => {
               if (node.isMesh) {
-                node.frustumCulled = false;
+                // node.frustumCulled = false;
                 node.castShadow = true;
                 node.receiveShadow = true;
                 meshList.push({

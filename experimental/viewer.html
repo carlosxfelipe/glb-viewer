@@ -26,24 +26,24 @@
       :root {
         --bg-color: #0f1115;
         --panel-bg: rgba(30, 32, 38, 0.7);
-        --accent-color: #e61e25;
+        --accent-color: #3b82f6;
         --text-color: #f8fafc;
-        --text-muted: #ffb3b8;
-        --glass-border: rgba(230, 30, 37, 0.15);
+        --text-muted: #94a3b8;
+        --glass-border: rgba(255, 255, 255, 0.1);
         --title-gradient-1: #ffffff;
-        --title-gradient-2: #ff8a8f;
+        --title-gradient-2: #94a3b8;
       }
 
       @media (prefers-color-scheme: light) {
         :root {
-          --bg-color: #ffffff;
-          --panel-bg: rgba(255, 250, 250, 0.85);
-          --accent-color: #e61e25;
-          --text-color: #1a0a0a;
-          --text-muted: #8b4548;
-          --glass-border: rgba(230, 30, 37, 0.15);
-          --title-gradient-1: #1a0a0a;
-          --title-gradient-2: #c4161c;
+          --bg-color: #f8fafc;
+          --panel-bg: rgba(255, 255, 255, 0.7);
+          --accent-color: #2563eb;
+          --text-color: #0f172a;
+          --text-muted: #64748b;
+          --glass-border: rgba(0, 0, 0, 0.1);
+          --title-gradient-1: #0f172a;
+          --title-gradient-2: #475569;
         }
       }
 
@@ -114,36 +114,6 @@
         -webkit-text-fill-color: transparent;
       }
 
-      .btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--glass-border);
-        color: var(--text-color);
-        padding: 10px 18px;
-        border-radius: 10px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-
-      .btn-primary {
-        background: var(--accent-color);
-        border-color: transparent;
-      }
-
-      .btn-primary:hover {
-        background: #c4161c;
-      }
-
       .drop-zone {
         position: absolute;
         top: 50%;
@@ -170,7 +140,7 @@
         visibility: visible;
         opacity: 1;
         border-color: var(--accent-color);
-        background: rgba(230, 30, 37, 0.05);
+        background: rgba(59, 130, 246, 0.05);
         backdrop-filter: blur(4px);
       }
 
@@ -252,7 +222,8 @@
         width: 90%;
         max-width: 400px;
         max-height: 70vh;
-        background: var(--bg-color);
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
         border: 1px solid var(--glass-border);
         border-radius: 20px;
         padding: 24px;
@@ -343,7 +314,9 @@
         position: absolute;
         bottom: 24px;
         right: 24px;
-        background: var(--bg-color);
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--glass-border);
         border-radius: 100px;
         padding: 8px;
@@ -392,7 +365,9 @@
         bottom: calc(100% + 12px);
         left: 50%;
         transform: translateX(-50%) translateY(4px);
-        background: var(--bg-color);
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--glass-border);
         color: var(--text-color);
         padding: 6px 12px;
@@ -414,7 +389,7 @@
         left: 50%;
         transform: translateX(-50%);
         border: 6px solid transparent;
-        border-top-color: var(--bg-color);
+        border-top-color: var(--panel-bg);
         opacity: 0;
         pointer-events: none;
         transition: all 0.2s ease;
@@ -428,6 +403,17 @@
 
       .hub-btn:hover::after {
         opacity: 1;
+      }
+
+      .top-hub-panel {
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 100px;
+        padding: 8px;
+        pointer-events: auto;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       }
 
       @media (prefers-color-scheme: light) {
@@ -455,6 +441,7 @@
           "three/examples/jsm/loaders/GLTFLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js",
           "three/examples/jsm/loaders/DRACOLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js",
           "three/examples/jsm/environments/RoomEnvironment": "https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js",
+          "three/examples/jsm/libs/stats.module": "https://esm.sh/three@0.160.0/examples/jsm/libs/stats.module.js",
           "meshoptimizer": "https://esm.sh/meshoptimizer@0.21.0"
         }
       }
@@ -469,6 +456,7 @@
       import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
       import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
       import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment";
+      import Stats from "three/examples/jsm/libs/stats.module";
       import { MeshoptDecoder } from "meshoptimizer";
 
       function App() {
@@ -478,7 +466,13 @@
         const [meshes, setMeshes] = useState([]);
         const [filename, setFilename] = useState("");
         const [showGrid, setShowGrid] = useState(true);
-        const [showMeshList, setShowMeshList] = useState(true);
+        const [showMeshList, setShowMeshList] = useState(false);
+        const [animations, setAnimations] = useState([]);
+        const [showAnimationList, setShowAnimationList] = useState(
+          false,
+        );
+        const [currentAnimation, setCurrentAnimation] = useState(null);
+        const [showStats, setShowStats] = useState(false);
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -486,6 +480,9 @@
         const cameraRef = useRef(null);
         const modelRef = useRef(null);
         const controlsRef = useRef(null);
+        const mixerRef = useRef(null);
+        const activeActionRef = useRef(null);
+        const statsRef = useRef(null);
 
         useEffect(() => {
           // Theme Detection
@@ -606,6 +603,16 @@
             if (grid) grid.visible = val;
           };
 
+          // Stats Setup
+          const stats = new Stats();
+          stats.dom.style.position = "absolute";
+          stats.dom.style.top = "24px";
+          stats.dom.style.left = "24px";
+          stats.dom.style.zIndex = "100";
+          stats.dom.style.display = showStats ? "block" : "none";
+          document.body.appendChild(stats.dom);
+          statsRef.current = stats;
+
           // Resize handler
           const handleResize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -615,9 +622,13 @@
           window.addEventListener("resize", handleResize);
 
           // Animation Loop
+          const clock = new THREE.Clock();
           const animate = () => {
             requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            if (mixerRef.current) mixerRef.current.update(delta);
             controls.update();
+            if (statsRef.current) statsRef.current.update();
             renderer.render(scene, camera);
           };
           animate();
@@ -626,14 +637,10 @@
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
             mountRef.current?.removeChild(renderer.domElement);
+            if (statsRef.current) {
+              document.body.removeChild(statsRef.current.dom);
+            }
           };
-        }, []);
-
-        // Load specific model on mount
-        const modelPath = "public/models/opt/fast-dungeon_warkarma.glb";
-
-        useEffect(() => {
-          loadModel(modelPath);
         }, []);
 
         useEffect(() => {
@@ -642,22 +649,22 @@
           }
         }, [showGrid]);
 
-        const loadModel = (fileOrUrl) => {
-          const isUrl = typeof fileOrUrl === "string";
+        useEffect(() => {
+          if (statsRef.current) {
+            statsRef.current.dom.style.display = showStats
+              ? "block"
+              : "none";
+          }
+        }, [showStats]);
 
-          if (
-            !isUrl &&
-            (!fileOrUrl ||
-              !fileOrUrl.name.toLowerCase().endsWith(".glb"))
-          ) {
+        const loadModel = (file) => {
+          if (!file || !file.name.toLowerCase().endsWith(".glb")) {
             alert("Por favor, selecione um arquivo .glb válido");
             return;
           }
 
           setIsLoading(true);
-          setFilename(
-            isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name,
-          );
+          setFilename(file.name);
 
           // Clear previous model and free memory
           if (modelRef.current) {
@@ -674,6 +681,13 @@
             sceneRef.current.remove(modelRef.current);
           }
 
+          if (mixerRef.current) {
+            mixerRef.current.stopAllAction();
+            mixerRef.current = null;
+          }
+          activeActionRef.current = null;
+          setCurrentAnimation(null);
+
           const loader = new GLTFLoader();
           const dracoLoader = new DRACOLoader();
           dracoLoader.setDecoderPath(
@@ -682,72 +696,78 @@
           loader.setDRACOLoader(dracoLoader);
           loader.setMeshoptDecoder(MeshoptDecoder);
 
-          const handleGLTF = (gltf) => {
-            const model = gltf.scene;
+          const reader = new FileReader();
+          reader.readAsArrayBuffer(file);
+          reader.onload = (e) => {
+            loader.parse(
+              e.target.result,
+              "",
+              (gltf) => {
+                const model = gltf.scene;
 
-            // Center model
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
+                // Center model
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
 
-            model.position.x += model.position.x - center.x;
-            model.position.y += model.position.y - center.y;
-            model.position.z += model.position.z - center.z;
+                model.position.x += model.position.x - center.x;
+                model.position.y += model.position.y - center.y;
+                model.position.z += model.position.z - center.z;
 
-            // Adjust position so it sits on the floor
-            model.position.y += size.y / 2;
+                // Adjust position so it sits on the floor
+                model.position.y += size.y / 2;
 
-            const meshList = [];
-            model.traverse((node) => {
-              if (node.isMesh) {
-                // node.frustumCulled = false;
-                node.castShadow = true;
-                node.receiveShadow = true;
-                meshList.push({
-                  name: node.name ||
-                    `Desconhecido (${node.uuid.substring(0, 4)})`,
-                  uuid: node.uuid,
+                const meshList = [];
+                model.traverse((node) => {
+                  if (node.isMesh) {
+                    node.frustumCulled = false; // Force rendering even outside camera view to prevent parts from disappearing while rotating, but can be heavy for giant models.
+                    node.castShadow = true;
+                    node.receiveShadow = true;
+                    meshList.push({
+                      name: node.name ||
+                        `Desconhecido (${node.uuid.substring(0, 4)})`,
+                      uuid: node.uuid,
+                    });
+                  }
                 });
-              }
-            });
 
-            sceneRef.current.add(model);
-            modelRef.current = model;
+                sceneRef.current.add(model);
+                modelRef.current = model;
 
-            // Update camera position to see the model
-            const maxDim = Math.max(size.x, size.y, size.z);
-            cameraRef.current.position.set(
-              maxDim * 1.5,
-              maxDim * 1.5,
-              maxDim * 1.5,
+                // Update camera position to see the model
+                const maxDim = Math.max(size.x, size.y, size.z);
+                cameraRef.current.position.set(
+                  maxDim * 1.5,
+                  maxDim * 1.5,
+                  maxDim * 1.5,
+                );
+                controlsRef.current.target.set(0, size.y / 2, 0);
+
+                setMeshes(meshList);
+
+                // Setup Animations
+                if (gltf.animations && gltf.animations.length > 0) {
+                  const mixer = new THREE.AnimationMixer(model);
+                  mixerRef.current = mixer;
+                  setAnimations(gltf.animations);
+                  console.log(
+                    "Animations found:",
+                    gltf.animations.map((a) => a.name),
+                  );
+                } else {
+                  setAnimations([]);
+                  console.log("No animations found");
+                }
+
+                setIsLoading(false);
+              },
+              (err) => {
+                console.error(err);
+                alert("Erro ao carregar o modelo");
+                setIsLoading(false);
+              },
             );
-            controlsRef.current.target.set(0, size.y / 2, 0);
-
-            setMeshes(meshList);
-            console.log("Mesh list (menu entries):", meshList);
-            setIsLoading(false);
           };
-
-          const handleError = (err) => {
-            console.error(err);
-            alert("Erro ao carregar o modelo");
-            setIsLoading(false);
-          };
-
-          if (isUrl) {
-            loader.load(fileOrUrl, handleGLTF, undefined, handleError);
-          } else {
-            const reader = new FileReader();
-            reader.readAsArrayBuffer(fileOrUrl);
-            reader.onload = (e) => {
-              loader.parse(
-                e.target.result,
-                "",
-                handleGLTF,
-                handleError,
-              );
-            };
-          }
         };
 
         const onDrop = (e) => {
@@ -809,7 +829,7 @@
                       mat: m,
                       color: m.emissive.getHex(),
                     });
-                    m.emissive.setHex(0xe61e25);
+                    m.emissive.setHex(0x3b82f6);
                   }
                 });
               }
@@ -839,6 +859,23 @@
           );
           controlsRef.current.target.set(0, size.y / 2, 0);
           controlsRef.current.update();
+        };
+
+        const playAnimation = (name) => {
+          if (!mixerRef.current || !modelRef.current) return;
+
+          const clip = THREE.AnimationClip.findByName(animations, name);
+          if (clip) {
+            const action = mixerRef.current.clipAction(clip);
+
+            if (activeActionRef.current) {
+              activeActionRef.current.fadeOut(0.5);
+            }
+
+            action.reset().fadeIn(0.5).play();
+            activeActionRef.current = action;
+            setCurrentAnimation(name);
+          }
         };
 
         const takeScreenshot = () => {
@@ -883,6 +920,35 @@
                     ${filename || "Nenhum arquivo carregado"}
                   </p>
                 </div>
+                <div class="top-hub-panel">
+                  <button
+                    class="hub-btn"
+                    onClick="${() =>
+                      document.getElementById("file-input").click()}"
+                    data-tooltip="Abrir arquivo GLB"
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  </button>
+                </div>
+                <input
+                  type="file"
+                  id="file-input"
+                  accept=".glb"
+                  onChange="${onFileSelect}"
+                />
               </div>
 
               ${meshes.length > 0 &&
@@ -937,7 +1003,99 @@
                       </div>
                     </div>
                   </div>
-                `} ${isLoading &&
+                `} ${animations.length > 0 &&
+                showAnimationList &&
+                html`
+                  <div
+                    class="mesh-modal-backdrop"
+                    onClick="${() => setShowAnimationList(false)}"
+                  >
+                    <div
+                      class="mesh-modal"
+                      onClick="${(e) => e.stopPropagation()}"
+                    >
+                      <div class="mesh-modal-header">
+                        <h4>Animações (${animations.length})</h4>
+                        <button
+                          class="mesh-modal-close"
+                          onClick="${() => setShowAnimationList(false)}"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="mesh-modal-content">
+                        ${animations.map(
+                          (clip) =>
+                            html`
+                              <div
+                                class="mesh-item ${currentAnimation ===
+                                    clip.name
+                                  ? "active"
+                                  : ""}"
+                                key="${clip.name}"
+                                onClick="${() => {
+                                  playAnimation(clip.name);
+                                  setShowAnimationList(false);
+                                }}"
+                                style="${currentAnimation === clip.name
+                                  ? "background: var(--accent-color); color: white;"
+                                  : ""}"
+                              >
+                                ${clip.name}
+                              </div>
+                            `,
+                        )}
+                        <div
+                          class="mesh-item"
+                          onClick="${() => {
+                            if (activeActionRef.current) {
+                              activeActionRef.current.stop();
+                            }
+                            setCurrentAnimation(null);
+                            setShowAnimationList(false);
+                          }}"
+                          style="border-top: 1px solid var(--glass-border); margin-top: 10px; opacity: 0.6;"
+                        >
+                          Parar Animação
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `}
+
+              <div class="drop-zone ${isDragging ? "active" : ""}">
+                <svg
+                  width="60"
+                  height="60"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--accent-color)"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="margin-bottom: 20px;"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <h3>Solte o arquivo GLB aqui</h3>
+                <p>Arraste e solte para visualizar instantaneamente</p>
+              </div>
+
+              ${isLoading &&
                 html`
                   <div class="loader-info">
                     <div class="spinner"></div>
@@ -1004,6 +1162,28 @@
                   </svg>
                 </button>
                 <button
+                  class="hub-btn ${showAnimationList ? "active" : ""}"
+                  data-tooltip="Animações"
+                  onClick="${() =>
+                    setShowAnimationList(!showAnimationList)}"
+                  style="${animations.length === 0
+                    ? "display: none;"
+                    : ""}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </button>
+                <button
                   class="hub-btn"
                   data-tooltip="Capturar Foto"
                   onClick="${takeScreenshot}"
@@ -1020,6 +1200,26 @@
                       d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
                     />
                     <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn ${showStats ? "active" : ""}"
+                  data-tooltip="Desempenho (FPS)"
+                  onClick="${() => setShowStats(!showStats)}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
                   </svg>
                 </button>
               </div>
