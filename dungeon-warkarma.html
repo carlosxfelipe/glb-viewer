@@ -78,8 +78,6 @@
         const [showGrid, setShowGrid] = useState(true);
         const [showMeshList, setShowMeshList] = useState(true);
         const [focusedInfo, setFocusedInfo] = useState(null);
-        const [showAnimationList, setShowAnimationList] = useState(false);
-        const [currentAnimation, setCurrentAnimation] = useState(null);
         const [showStats, setShowStats] = useState(false);
 
         // Scene refs
@@ -88,8 +86,6 @@
         const cameraRef = useRef(null);
         const modelRef = useRef(null);
         const controlsRef = useRef(null);
-        const mixerRef = useRef(null);
-        const activeActionRef = useRef(null);
         const statsRef = useRef(null);
 
         useEffect(() => {
@@ -127,7 +123,7 @@
             logarithmicDepthBuffer: true,
           });
           renderer.setSize(window.innerWidth, window.innerHeight);
-          
+
           // Optimization: cap pixel ratio on mobile to 2.0 (often default 3.0+ is overkill for performance)
           const pixelRatio = Math.min(window.devicePixelRatio, 2);
           renderer.setPixelRatio(pixelRatio);
@@ -239,7 +235,6 @@
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
 
-
           // Robust click detection
           let mouseDownTime = 0;
           const mouseDownPos = new THREE.Vector2();
@@ -251,7 +246,10 @@
 
           const handleMouseUp = (e) => {
             const clickDuration = Date.now() - mouseDownTime;
-            const moveDistance = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
+            const moveDistance = Math.hypot(
+              e.clientX - mouseDownPos.x,
+              e.clientY - mouseDownPos.y,
+            );
 
             // If it was a quick click and the mouse didn't move much, it's a selection
             if (clickDuration < 300 && moveDistance < 5) {
@@ -260,11 +258,16 @@
               mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
               raycaster.setFromCamera(mouse, camera);
-              const intersects = raycaster.intersectObjects(scene.children, true);
+              const intersects = raycaster.intersectObjects(
+                scene.children,
+                true,
+              );
 
               if (intersects.length > 0) {
                 // Find the first mesh in the intersection
-                const firstMesh = intersects.find(i => i.object.isMesh);
+                const firstMesh = intersects.find((i) =>
+                  i.object.isMesh
+                );
                 if (firstMesh) {
                   // If we have filtered mesh meta, we should probably only focus on "selectable" items
                   // or just focus on whatever was clicked and let focusMesh handle if it's in the list
@@ -274,8 +277,14 @@
             }
           };
 
-          renderer.domElement.addEventListener("mousedown", handleMouseDown);
-          renderer.domElement.addEventListener("mouseup", handleMouseUp);
+          renderer.domElement.addEventListener(
+            "pointerdown",
+            handleMouseDown,
+          );
+          renderer.domElement.addEventListener(
+            "pointerup",
+            handleMouseUp,
+          );
 
           // Animation Loop
           const animate = () => {
@@ -289,8 +298,14 @@
           return () => {
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
-            renderer.domElement.removeEventListener("mousedown", handleMouseDown);
-            renderer.domElement.removeEventListener("mouseup", handleMouseUp);
+            renderer.domElement.removeEventListener(
+              "pointerdown",
+              handleMouseDown,
+            );
+            renderer.domElement.removeEventListener(
+              "pointerup",
+              handleMouseUp,
+            );
             mountRef.current?.removeChild(renderer.domElement);
             if (statsRef.current) {
               document.body.removeChild(statsRef.current.dom);
@@ -385,7 +400,11 @@
           }
 
           setIsLoading(true);
-          sendMessageToRN("LOAD_START", { filename: isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name });
+          sendMessageToRN("LOAD_START", {
+            filename: isUrl
+              ? fileOrUrl.split("/").pop()
+              : fileOrUrl.name,
+          });
           setFilename(
             isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name,
           );
@@ -527,7 +546,9 @@
             setMeshes(meshList);
             console.log("Mesh list (menu entries):", meshList);
             setIsLoading(false);
-            sendMessageToRN("LOAD_COMPLETE", { meshCount: meshList.length });
+            sendMessageToRN("LOAD_COMPLETE", {
+              meshCount: meshList.length,
+            });
           };
 
           const handleError = (err) => {
@@ -610,16 +631,17 @@
                 name: clicked.name,
                 description: clicked.description,
               });
-              sendMessageToRN("MESH_FOCUSED", { 
-                uuid, 
-                name: clicked.name, 
-                description: clicked.description 
+              sendMessageToRN("MESH_FOCUSED", {
+                uuid,
+                name: clicked.name,
+                description: clicked.description,
               });
             } else {
               // If it's a mesh not in our metadata list, we can still show its internal name
               setFocusedInfo({
                 name: object.name || "Objeto Desconhecido",
-                description: "Este objeto não possui uma descrição detalhada.",
+                description:
+                  "Este objeto não possui uma descrição detalhada.",
               });
             }
 
@@ -810,110 +832,110 @@
                   </div>
                 `}
 
-                <div class="hub-panel">
-                  <button
-                    class="hub-btn"
-                    data-tooltip="Centralizar Câmera"
-                    onClick="${resetView}"
+              <div class="hub-panel">
+                <button
+                  class="hub-btn"
+                  data-tooltip="Centralizar Câmera"
+                  onClick="${resetView}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <circle cx="12" cy="12" r="6" />
-                      <circle cx="12" cy="12" r="2" />
-                    </svg>
-                  </button>
-                  <button
-                    class="hub-btn ${showGrid ? "active" : ""}"
-                    data-tooltip="Grelha de Chão"
-                    onClick="${() => setShowGrid(!showGrid)}"
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn ${showGrid ? "active" : ""}"
+                  data-tooltip="Grelha de Chão"
+                  onClick="${() => setShowGrid(!showGrid)}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <line x1="3" y1="9" x2="21" y2="9" />
-                      <line x1="3" y1="15" x2="21" y2="15" />
-                      <line x1="9" y1="3" x2="9" y2="21" />
-                      <line x1="15" y1="3" x2="15" y2="21" />
-                    </svg>
-                  </button>
-                  <button
-                    class="hub-btn ${showMeshList ? "active" : ""}"
-                    data-tooltip="Objetos na Cena"
-                    onClick="${() => setShowMeshList(!showMeshList)}"
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="3" y1="15" x2="21" y2="15" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                    <line x1="15" y1="3" x2="15" y2="21" />
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn ${showMeshList ? "active" : ""}"
+                  data-tooltip="Objetos na Cena"
+                  onClick="${() => setShowMeshList(!showMeshList)}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <line x1="9" y1="3" x2="9" y2="21" />
-                    </svg>
-                  </button>
-                  <button
-                    class="hub-btn ${showStats ? "active" : ""}"
-                    data-tooltip="Desempenho (FPS)"
-                    onClick="${() => setShowStats(!showStats)}"
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn ${showStats ? "active" : ""}"
+                  data-tooltip="Desempenho (FPS)"
+                  onClick="${() => setShowStats(!showStats)}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <line x1="18" y1="20" x2="18" y2="10"></line>
-                      <line x1="12" y1="20" x2="12" y2="4"></line>
-                      <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg>
-                  </button>
-                  <button
-                    class="hub-btn"
-                    data-tooltip="Capturar Foto"
-                    onClick="${takeScreenshot}"
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn"
+                  data-tooltip="Capturar Foto"
+                  onClick="${takeScreenshot}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
                   >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
-                      />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                  </button>
-                </div>
+                    <path
+                      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                    />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </button>
               </div>
             </div>
-          `;
-        }
+          </div>
+        `;
+      }
 
-        render(h(App), document.getElementById("app"));
+      render(h(App), document.getElementById("app"));
     </script>
   </body>
 </html>

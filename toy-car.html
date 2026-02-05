@@ -119,7 +119,7 @@
             logarithmicDepthBuffer: true,
           });
           renderer.setSize(window.innerWidth, window.innerHeight);
-          
+
           // Optimization: cap pixel ratio on mobile to 2.0 (often default 3.0+ is overkill for performance)
           const pixelRatio = Math.min(window.devicePixelRatio, 2);
           renderer.setPixelRatio(pixelRatio);
@@ -247,10 +247,13 @@
               );
 
               if (intersects.length > 0) {
+                // Find the first mesh in the intersection
                 const firstMesh = intersects.find((i) =>
                   i.object.isMesh
                 );
                 if (firstMesh) {
+                  // If we have filtered mesh meta, we should probably only focus on "selectable" items
+                  // or just focus on whatever was clicked and let focusMesh handle if it's in the list
                   focusMesh(firstMesh.object.uuid, false);
                 }
               }
@@ -258,11 +261,11 @@
           };
 
           renderer.domElement.addEventListener(
-            "mousedown",
+            "pointerdown",
             handleMouseDown,
           );
           renderer.domElement.addEventListener(
-            "mouseup",
+            "pointerup",
             handleMouseUp,
           );
 
@@ -278,11 +281,11 @@
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
             renderer.domElement.removeEventListener(
-              "mousedown",
+              "pointerdown",
               handleMouseDown,
             );
             renderer.domElement.removeEventListener(
-              "mouseup",
+              "pointerup",
               handleMouseUp,
             );
             mountRef.current?.removeChild(renderer.domElement);
@@ -583,7 +586,8 @@
               // If it's a mesh not in our metadata list, we can still show its internal name
               setFocusedInfo({
                 name: object.name || "Objeto Desconhecido",
-                description: "Este objeto não possui uma descrição detalhada.",
+                description:
+                  "Este objeto não possui uma descrição detalhada.",
               });
             }
 
