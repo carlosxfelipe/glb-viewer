@@ -624,6 +624,58 @@
           };
           window.addEventListener("resize", handleResize);
 
+          // Raycaster for clicking objects
+          const raycaster = new THREE.Raycaster();
+          const mouse = new THREE.Vector2();
+
+          // Robust click detection
+          let mouseDownTime = 0;
+          const mouseDownPos = new THREE.Vector2();
+
+          const handleMouseDown = (e) => {
+            mouseDownTime = Date.now();
+            mouseDownPos.set(e.clientX, e.clientY);
+          };
+
+          const handleMouseUp = (e) => {
+            const clickDuration = Date.now() - mouseDownTime;
+            const moveDistance = Math.hypot(
+              e.clientX - mouseDownPos.x,
+              e.clientY - mouseDownPos.y,
+            );
+
+            // If it was a quick click and the mouse didn't move much, it's a selection
+            if (clickDuration < 300 && moveDistance < 5) {
+              const rect = renderer.domElement.getBoundingClientRect();
+              mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+              mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+              raycaster.setFromCamera(mouse, camera);
+              const intersects = raycaster.intersectObjects(
+                scene.children,
+                true,
+              );
+
+              if (intersects.length > 0) {
+                const firstMesh = intersects.find((i) =>
+                  i.object.isMesh
+                );
+                if (firstMesh) {
+                  focusMesh(firstMesh.object.uuid, false);
+                }
+              }
+            }
+          };
+
+          renderer.domElement.addEventListener(
+            "mousedown",
+            handleMouseDown,
+          );
+          renderer.domElement.addEventListener(
+            "mouseup",
+            handleMouseUp,
+          );
+
           // Animation Loop
           const clock = new THREE.Clock();
           const animate = () => {
@@ -639,6 +691,8 @@
           return () => {
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
+            renderer.domElement.removeEventListener("mousedown", handleMouseDown);
+            renderer.domElement.removeEventListener("mouseup", handleMouseUp);
             mountRef.current?.removeChild(renderer.domElement);
             if (statsRef.current) {
               document.body.removeChild(statsRef.current.dom);
@@ -802,7 +856,7 @@
           loadModel(file);
         };
 
-        const focusMesh = (uuid) => {
+        const focusMesh = (uuid, isFromMenu = false) => {
           if (!modelRef.current) return;
 
           const object = modelRef.current.getObjectByProperty(
@@ -823,7 +877,10 @@
             cameraZ *= 2.5; // Add some padding
 
             // Calculate new camera position
-            const offset = new THREE.Vector3(cameraZ, cameraZ, cameraZ);
+            // If from menu, use diagonal perspective; if from raycaster, use front view
+            const offset = isFromMenu
+              ? new THREE.Vector3(cameraZ, cameraZ, cameraZ)
+              : new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
             const newPos = center.clone().add(offset);
 
             // Set new state
@@ -1007,7 +1064,7 @@
                                 key="${m.uuid}"
                                 title="Clique para focar em ${m.name}"
                                 onClick="${() => {
-                                  focusMesh(m.uuid);
+                                  focusMesh(m.uuid, true);
                                   setShowMeshList(false);
                                 }}"
                               >

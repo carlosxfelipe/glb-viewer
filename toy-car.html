@@ -59,6 +59,16 @@
 
       function App() {
         const mountRef = useRef(null);
+
+        // Helper to send messages to React Native
+        const sendMessageToRN = (type, data = {}) => {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(
+              JSON.stringify({ type, ...data }),
+            );
+          }
+        };
+
         const [isLoading, setIsLoading] = useState(false);
         const [isDragging, setIsDragging] = useState(false);
         const [meshes, setMeshes] = useState([]);
@@ -109,7 +119,10 @@
             logarithmicDepthBuffer: true,
           });
           renderer.setSize(window.innerWidth, window.innerHeight);
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          
+          // Optimization: cap pixel ratio on mobile to 2.0 (often default 3.0+ is overkill for performance)
+          const pixelRatio = Math.min(window.devicePixelRatio, 2);
+          renderer.setPixelRatio(pixelRatio);
 
           // Color Management
           renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -201,6 +214,58 @@
           };
           window.addEventListener("resize", handleResize);
 
+          // Raycaster for clicking objects
+          const raycaster = new THREE.Raycaster();
+          const mouse = new THREE.Vector2();
+
+          // Robust click detection
+          let mouseDownTime = 0;
+          const mouseDownPos = new THREE.Vector2();
+
+          const handleMouseDown = (e) => {
+            mouseDownTime = Date.now();
+            mouseDownPos.set(e.clientX, e.clientY);
+          };
+
+          const handleMouseUp = (e) => {
+            const clickDuration = Date.now() - mouseDownTime;
+            const moveDistance = Math.hypot(
+              e.clientX - mouseDownPos.x,
+              e.clientY - mouseDownPos.y,
+            );
+
+            // If it was a quick click and the mouse didn't move much, it's a selection
+            if (clickDuration < 300 && moveDistance < 5) {
+              const rect = renderer.domElement.getBoundingClientRect();
+              mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+              mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+              raycaster.setFromCamera(mouse, camera);
+              const intersects = raycaster.intersectObjects(
+                scene.children,
+                true,
+              );
+
+              if (intersects.length > 0) {
+                const firstMesh = intersects.find((i) =>
+                  i.object.isMesh
+                );
+                if (firstMesh) {
+                  focusMesh(firstMesh.object.uuid, false);
+                }
+              }
+            }
+          };
+
+          renderer.domElement.addEventListener(
+            "mousedown",
+            handleMouseDown,
+          );
+          renderer.domElement.addEventListener(
+            "mouseup",
+            handleMouseUp,
+          );
+
           // Animation Loop
           const animate = () => {
             requestAnimationFrame(animate);
@@ -212,9 +277,55 @@
           return () => {
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
+            renderer.domElement.removeEventListener(
+              "mousedown",
+              handleMouseDown,
+            );
+            renderer.domElement.removeEventListener(
+              "mouseup",
+              handleMouseUp,
+            );
             mountRef.current?.removeChild(renderer.domElement);
           };
         }, []);
+
+        // Listen for messages FROM React Native
+        useEffect(() => {
+          const handleMessage = (event) => {
+            try {
+              const message = JSON.parse(event.data);
+              console.log("[Bridge] Received from RN:", message);
+
+              switch (message.type) {
+                case "FOCUS_MESH":
+                  if (message.uuid) focusMesh(message.uuid, true);
+                  break;
+                case "RESET_VIEW":
+                  resetView();
+                  break;
+                case "TOGGLE_GRID":
+                  setShowGrid(!!message.value);
+                  break;
+                case "TOGGLE_STATS":
+                  setShowStats(!!message.value);
+                  break;
+                case "TOGGLE_MESH_LIST":
+                  setShowMeshList(!!message.value);
+                  break;
+              }
+            } catch (e) {
+              // Not a JSON message or not for us
+            }
+          };
+
+          window.addEventListener("message", handleMessage);
+          document.addEventListener("message", handleMessage); // For some Android versions
+
+          return () => {
+            window.removeEventListener("message", handleMessage);
+            document.removeEventListener("message", handleMessage);
+          };
+        }, [meshes]); // Re-bind when meshes change to ensure focusMesh works with current state
 
         // Load specific model on mount
         const MODEL_PATHS = {
@@ -257,6 +368,11 @@
           }
 
           setIsLoading(true);
+          sendMessageToRN("LOAD_START", {
+            filename: isUrl
+              ? fileOrUrl.split("/").pop()
+              : fileOrUrl.name,
+          });
           setFilename(
             isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name,
           );
@@ -373,12 +489,16 @@
             setMeshes(meshList);
             console.log("Mesh list (menu entries):", meshList);
             setIsLoading(false);
+            sendMessageToRN("LOAD_COMPLETE", {
+              meshCount: meshList.length,
+            });
           };
 
           const handleError = (err) => {
             console.error(err);
             alert("Erro ao carregar o modelo");
             setIsLoading(false);
+            sendMessageToRN("LOAD_ERROR", { error: err.message });
           };
 
           if (isUrl) {
@@ -414,7 +534,7 @@
           loadModel(file);
         };
 
-        const focusMesh = (uuid) => {
+        const focusMesh = (uuid, isFromMenu = false) => {
           if (!modelRef.current) return;
 
           const object = modelRef.current.getObjectByProperty(
@@ -435,7 +555,11 @@
             cameraZ *= 2.5; // Add some padding
 
             // Calculate new camera position
-            const offset = new THREE.Vector3(cameraZ, cameraZ, cameraZ);
+            // If from menu, use diagonal perspective; if from raycaster, use front view
+            const offset = isFromMenu
+              ? new THREE.Vector3(cameraZ, cameraZ, cameraZ)
+              : new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
+
             const newPos = center.clone().add(offset);
 
             // Set new state
@@ -449,6 +573,17 @@
               setFocusedInfo({
                 name: clicked.name,
                 description: clicked.description,
+              });
+              sendMessageToRN("MESH_FOCUSED", {
+                uuid,
+                name: clicked.name,
+                description: clicked.description,
+              });
+            } else {
+              // If it's a mesh not in our metadata list, we can still show its internal name
+              setFocusedInfo({
+                name: object.name || "Objeto Desconhecido",
+                description: "Este objeto não possui uma descrição detalhada.",
               });
             }
 
@@ -582,7 +717,7 @@
                                 key="${m.uuid}"
                                 title="Clique para focar em ${m.name}"
                                 onClick="${() => {
-                                  focusMesh(m.uuid);
+                                  focusMesh(m.uuid, true);
                                   setShowMeshList(false);
                                 }}"
                               >
