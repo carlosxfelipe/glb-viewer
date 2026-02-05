@@ -40,6 +40,7 @@
           "three/examples/jsm/loaders/DRACOLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js",
           "three/examples/jsm/loaders/KTX2Loader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/KTX2Loader.js",
           "three/examples/jsm/environments/RoomEnvironment": "https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js",
+          "three/examples/jsm/libs/stats.module": "https://esm.sh/three@0.160.0/examples/jsm/libs/stats.module.js",
           "meshoptimizer": "https://esm.sh/meshoptimizer@0.21.0"
         }
       }
@@ -55,10 +56,21 @@
       import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
       import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader";
       import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment";
+      import Stats from "three/examples/jsm/libs/stats.module";
       import { MeshoptDecoder } from "meshoptimizer";
 
       function App() {
         const mountRef = useRef(null);
+
+        // Helper to send messages to React Native
+        const sendMessageToRN = (type, data = {}) => {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(
+              JSON.stringify({ type, ...data }),
+            );
+          }
+        };
+
         const [isLoading, setIsLoading] = useState(false);
         const [isDragging, setIsDragging] = useState(false);
         const [meshes, setMeshes] = useState([]);
@@ -66,6 +78,9 @@
         const [showGrid, setShowGrid] = useState(true);
         const [showMeshList, setShowMeshList] = useState(true);
         const [focusedInfo, setFocusedInfo] = useState(null);
+        const [showAnimationList, setShowAnimationList] = useState(false);
+        const [currentAnimation, setCurrentAnimation] = useState(null);
+        const [showStats, setShowStats] = useState(false);
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -73,6 +88,9 @@
         const cameraRef = useRef(null);
         const modelRef = useRef(null);
         const controlsRef = useRef(null);
+        const mixerRef = useRef(null);
+        const activeActionRef = useRef(null);
+        const statsRef = useRef(null);
 
         useEffect(() => {
           // Theme Detection
@@ -109,7 +127,10 @@
             logarithmicDepthBuffer: true,
           });
           renderer.setSize(window.innerWidth, window.innerHeight);
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          
+          // Optimization: cap pixel ratio on mobile to 2.0 (often default 3.0+ is overkill for performance)
+          const pixelRatio = Math.min(window.devicePixelRatio, 2);
+          renderer.setPixelRatio(pixelRatio);
 
           // Color Management
           renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -184,8 +205,10 @@
             renderer.domElement,
           );
           controls.enableDamping = true;
-          controls.dampingFactor = 0.05;
-          controls.zoomSpeed = 1.0;
+          controls.dampingFactor = 0.08; // slightly higher for snappier feel
+          controls.rotateSpeed = 0.8;
+          controls.touchRotateSpeed = 1.0;
+          controls.zoomSpeed = 1.2;
           controlsRef.current = controls;
 
           // Expose helper to change grid visibility from outside
@@ -201,10 +224,22 @@
           };
           window.addEventListener("resize", handleResize);
 
+          // Stats Setup
+          const stats = new Stats();
+          stats.dom.style.position = "absolute";
+          stats.dom.style.top = "auto";
+          stats.dom.style.bottom = "24px";
+          stats.dom.style.left = "24px";
+          stats.dom.style.zIndex = "100";
+          stats.dom.style.display = showStats ? "block" : "none";
+          document.body.appendChild(stats.dom);
+          statsRef.current = stats;
+
           // Animation Loop
           const animate = () => {
             requestAnimationFrame(animate);
             controls.update();
+            if (statsRef.current) statsRef.current.update();
             renderer.render(scene, camera);
           };
           animate();
@@ -213,8 +248,49 @@
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
             mountRef.current?.removeChild(renderer.domElement);
+            if (statsRef.current) {
+              document.body.removeChild(statsRef.current.dom);
+            }
           };
         }, []);
+
+        // Listen for messages FROM React Native
+        useEffect(() => {
+          const handleMessage = (event) => {
+            try {
+              const message = JSON.parse(event.data);
+              console.log("[Bridge] Received from RN:", message);
+
+              switch (message.type) {
+                case "FOCUS_MESH":
+                  if (message.uuid) focusMesh(message.uuid);
+                  break;
+                case "RESET_VIEW":
+                  resetView();
+                  break;
+                case "TOGGLE_GRID":
+                  setShowGrid(!!message.value);
+                  break;
+                case "TOGGLE_STATS":
+                  setShowStats(!!message.value);
+                  break;
+                case "TOGGLE_MESH_LIST":
+                  setShowMeshList(!!message.value);
+                  break;
+              }
+            } catch (e) {
+              // Not a JSON message or not for us
+            }
+          };
+
+          window.addEventListener("message", handleMessage);
+          document.addEventListener("message", handleMessage); // For some Android versions
+
+          return () => {
+            window.removeEventListener("message", handleMessage);
+            document.removeEventListener("message", handleMessage);
+          };
+        }, [meshes]); // Re-bind when meshes change to ensure focusMesh works with current state
 
         // Load specific model on mount
         const MODEL_PATHS = {
@@ -244,6 +320,14 @@
           }
         }, [showGrid]);
 
+        useEffect(() => {
+          if (statsRef.current) {
+            statsRef.current.dom.style.display = showStats
+              ? "block"
+              : "none";
+          }
+        }, [showStats]);
+
         const loadModel = (fileOrUrl) => {
           const isUrl = typeof fileOrUrl === "string";
 
@@ -257,6 +341,7 @@
           }
 
           setIsLoading(true);
+          sendMessageToRN("LOAD_START", { filename: isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name });
           setFilename(
             isUrl ? fileOrUrl.split("/").pop() : fileOrUrl.name,
           );
@@ -398,12 +483,14 @@
             setMeshes(meshList);
             console.log("Mesh list (menu entries):", meshList);
             setIsLoading(false);
+            sendMessageToRN("LOAD_COMPLETE", { meshCount: meshList.length });
           };
 
           const handleError = (err) => {
             console.error(err);
             alert("Erro ao carregar o modelo");
             setIsLoading(false);
+            sendMessageToRN("LOAD_ERROR", { error: err.message });
           };
 
           if (isUrl) {
@@ -474,6 +561,11 @@
               setFocusedInfo({
                 name: clicked.name,
                 description: clicked.description,
+              });
+              sendMessageToRN("MESH_FOCUSED", { 
+                uuid, 
+                name: clicked.name, 
+                description: clicked.description 
               });
             }
 
@@ -626,53 +718,43 @@
                   </div>
                 `} ${focusedInfo &&
                 html`
-                  <div
-                    style="position:absolute; bottom:90px; right:24px;
-                      background: var(--panel-bg);
-                      border: 1px solid var(--glass-border);
-                      border-radius: 16px; padding: 14px 16px;
-                      pointer-events: auto; max-width: min(400px, calc(100vw - 48px));
-                      backdrop-filter: blur(12px);
-                      box-shadow: 0 8px 32px rgba(0,0,0,0.3);"
-                    >
-                      <div
-                        style="display:flex; align-items:flex-start; gap:10px;"
-                      >
-                        <div style="flex:1; min-width: 0;">
-                          <div
-                            style="font-weight:600; margin-bottom:6px; overflow-wrap: break-word;"
-                          >
-                            ${focusedInfo.name}
-                          </div>
-                          <div
-                            style="font-size:0.9rem; color:var(--text-muted); line-height:1.35;"
-                          >
-                            ${focusedInfo.description}
-                          </div>
-                        </div>
-                        <button
-                          class="mesh-modal-close"
-                          onClick="${() => setFocusedInfo(null)}"
-                          title="Fechar"
-                          style="margin-left:6px;"
+                  <div class="focused-info-panel">
+                    <div style="display:flex; align-items:flex-start; gap:10px;">
+                      <div style="flex:1; min-width: 0;">
+                        <div
+                          style="font-weight:600; margin-bottom:6px; overflow-wrap: break-word;"
                         >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
+                          ${focusedInfo.name}
+                        </div>
+                        <div
+                          style="font-size:0.9rem; color:var(--text-muted); line-height:1.35;"
+                        >
+                          ${focusedInfo.description}
+                        </div>
                       </div>
+                      <button
+                        class="mesh-modal-close"
+                        onClick="${() => setFocusedInfo(null)}"
+                        title="Fechar"
+                        style="margin-left:6px;"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
                     </div>
-                  `}
+                  </div>
+                `}
 
                 <div class="hub-panel">
                   <button
@@ -730,6 +812,26 @@
                     >
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                       <line x1="9" y1="3" x2="9" y2="21" />
+                    </svg>
+                  </button>
+                  <button
+                    class="hub-btn ${showStats ? "active" : ""}"
+                    data-tooltip="Desempenho (FPS)"
+                    onClick="${() => setShowStats(!showStats)}"
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="18" y1="20" x2="18" y2="10"></line>
+                      <line x1="12" y1="20" x2="12" y2="4"></line>
+                      <line x1="6" y1="20" x2="6" y2="14"></line>
                     </svg>
                   </button>
                   <button
