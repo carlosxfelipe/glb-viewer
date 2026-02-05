@@ -254,7 +254,7 @@
                 if (firstMesh) {
                   // If we have filtered mesh meta, we should probably only focus on "selectable" items
                   // or just focus on whatever was clicked and let focusMesh handle if it's in the list
-                  focusMesh(firstMesh.object.uuid, false);
+                  focusMesh(firstMesh.object.uuid);
                 }
               }
             }
@@ -301,7 +301,7 @@
 
               switch (message.type) {
                 case "FOCUS_MESH":
-                  if (message.uuid) focusMesh(message.uuid, true);
+                  if (message.uuid) focusMesh(message.uuid);
                   break;
                 case "RESET_VIEW":
                   resetView();
@@ -537,7 +537,7 @@
           loadModel(file);
         };
 
-        const focusMesh = (uuid, isFromMenu = false) => {
+        const focusMesh = (uuid) => {
           if (!modelRef.current) return;
 
           const object = modelRef.current.getObjectByProperty(
@@ -557,11 +557,8 @@
             let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
             cameraZ *= 2.5; // Add some padding
 
-            // Calculate new camera position
-            // If from menu, use diagonal perspective; if from raycaster, use front view
-            const offset = isFromMenu
-              ? new THREE.Vector3(cameraZ, cameraZ, cameraZ)
-              : new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
+            // Calculate new camera position (front view)
+            const offset = new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
 
             const newPos = center.clone().add(offset);
 
@@ -721,7 +718,7 @@
                                 key="${m.uuid}"
                                 title="Clique para focar em ${m.name}"
                                 onClick="${() => {
-                                  focusMesh(m.uuid, true);
+                                  focusMesh(m.uuid);
                                   setShowMeshList(false);
                                 }}"
                               >

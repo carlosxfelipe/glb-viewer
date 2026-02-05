@@ -271,7 +271,7 @@
                 if (firstMesh) {
                   // If we have filtered mesh meta, we should probably only focus on "selectable" items
                   // or just focus on whatever was clicked and let focusMesh handle if it's in the list
-                  focusMesh(firstMesh.object.uuid, false);
+                  focusMesh(firstMesh.object.uuid);
                 }
               }
             }
@@ -322,7 +322,7 @@
 
               switch (message.type) {
                 case "FOCUS_MESH":
-                  if (message.uuid) focusMesh(message.uuid, true);
+                  if (message.uuid) focusMesh(message.uuid);
                   break;
                 case "RESET_VIEW":
                   resetView();
@@ -460,26 +460,21 @@
             model.position.y += size.y / 2;
 
             const filteredMeshMeta = {
-              Wall_Windows001_Wall_Dark_White_0: {
+              Column004_Wall_Dark_Blue_0: {
                 name: "Entrada da Dungeon",
                 description: "Área inicial de acesso à dungeon.",
               },
-              Wall_Windows003_Wall_Dark_White_0: {
+              Column009_Wall_Dark_Blue_0: {
                 name: "2ª Parte da Dungeon",
                 description:
                   "Uma reta principal que leva diretamente à Sala do Chefão.",
               },
-              Column021_Wall_Dark_Blue_0: {
-                name: "Sala do Chefão",
+              Boss_Skull_0: {
+                name: "Chefe da Dungeon",
                 description:
                   "Grande salão cerimonial onde reside o guardião esquelético da dungeon.",
               },
-              Wall_Windows006_Wall_Dark_Blue_0: {
-                name: "Após a Sala do Chefão",
-                description:
-                  "Área de logística e suprimentos contendo diversos barris e caixotes de madeira.",
-              },
-              Column025_Wall_Dark_Blue_0: {
+              P_Treasure_Tile_Border_0: {
                 name: "Tesouro Final da Dungeon",
                 description:
                   "Câmara guardada que contém as relíquias mais valiosas.",
@@ -591,7 +586,7 @@
           loadModel(file);
         };
 
-        const focusMesh = (uuid, isFromMenu = false) => {
+        const focusMesh = (uuid) => {
           if (!modelRef.current) return;
 
           const object = modelRef.current.getObjectByProperty(
@@ -611,11 +606,8 @@
             let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
             cameraZ *= 2.5; // Add some padding
 
-            // Calculate new camera position
-            // If from menu, use diagonal perspective; if from raycaster, use front view
-            const offset = isFromMenu
-              ? new THREE.Vector3(cameraZ, cameraZ, cameraZ)
-              : new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
+            // Calculate new camera position (front view)
+            const offset = new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
 
             const newPos = center.clone().add(offset);
 
@@ -775,7 +767,7 @@
                                 key="${m.uuid}"
                                 title="Clique para focar em ${m.name}"
                                 onClick="${() => {
-                                  focusMesh(m.uuid, true);
+                                  focusMesh(m.uuid);
                                   setShowMeshList(false);
                                 }}"
                               >
