@@ -347,6 +347,16 @@ html {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
+@media (max-width: 600px) {
+  .hub-panel {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
 .hub-btn {
   width: 44px;
   height: 44px;
