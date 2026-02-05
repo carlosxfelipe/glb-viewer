@@ -223,9 +223,10 @@
           // Stats Setup
           const stats = new Stats();
           stats.dom.style.position = "absolute";
-          stats.dom.style.top = "auto";
-          stats.dom.style.bottom = "24px";
-          stats.dom.style.left = "24px";
+          stats.dom.style.top = "24px";
+          stats.dom.style.bottom = "auto";
+          stats.dom.style.right = "24px";
+          stats.dom.style.left = "auto";
           stats.dom.style.zIndex = "100";
           stats.dom.style.display = showStats ? "block" : "none";
           document.body.appendChild(stats.dom);
