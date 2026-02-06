@@ -5,6 +5,9 @@
   --text-color: #f8fafc;
   --text-muted: #94a3b8;
   --glass-border: rgba(255, 255, 255, 0.1);
+  --perf-good: #4ade80;
+  --perf-warn: #fbbf24;
+  --perf-bad: #f87171;
   --title-gradient-1: #ffffff;
   --title-gradient-2: #94a3b8;
 }
@@ -17,6 +20,9 @@
     --text-color: #0f172a;
     --text-muted: #64748b;
     --glass-border: rgba(0, 0, 0, 0.1);
+    --perf-good: #16a34a;
+    --perf-warn: #d97706;
+    --perf-bad: #dc2626;
     --title-gradient-1: #0f172a;
     --title-gradient-2: #475569;
   }
@@ -472,4 +478,69 @@ html {
     bottom: calc(85px + env(safe-area-inset-bottom));
     max-width: unset;
   }
+}
+
+/* Performance Overlay */
+.perf-overlay {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 12px;
+  width: 220px;
+  pointer-events: none;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fadeIn 0.2s ease;
+}
+
+@media (max-width: 600px) {
+  .perf-overlay {
+    top: 12px;
+    right: 12px;
+    width: 200px;
+    padding: 12px;
+  }
+}
+
+.perf-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.perf-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.perf-value {
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.perf-value.warning {
+  color: var(--perf-warn);
+}
+
+.perf-value.good {
+  color: var(--perf-good);
+}
+
+.perf-value.critical {
+  color: var(--perf-bad);
+}
+
+.perf-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 4px 0;
 }

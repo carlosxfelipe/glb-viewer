@@ -11,7 +11,7 @@
       name="description"
       content="Um visualizador GLB simples e elegante construído com Preact e Three.js"
     />
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="data:," />
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -22,7 +22,7 @@
     />
 
     <!-- CSS Styling -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div id="app"></div>
@@ -79,6 +79,23 @@
         const [showMeshList, setShowMeshList] = useState(true);
         const [focusedInfo, setFocusedInfo] = useState(null);
         const [showStats, setShowStats] = useState(false);
+        const [perfStats, setPerfStats] = useState({
+          fps: 0,
+          memory: { used: 0, total: 0, limit: 0 },
+          network: {
+            totalMB: 0,
+            files: 0,
+            modelSizeMB: 0,
+            modelTime: 0,
+            isCached: false,
+          },
+          gpu: {
+            name: "Carregando...",
+            drawCalls: 0,
+            triangles: 0,
+            textures: 0,
+          },
+        });
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -86,6 +103,7 @@
         const cameraRef = useRef(null);
         const modelRef = useRef(null);
         const controlsRef = useRef(null);
+        const modelSourceRef = useRef("url"); // "url" or "local"
         const statsRef = useRef(null);
 
         useEffect(() => {
@@ -220,18 +238,6 @@
           };
           window.addEventListener("resize", handleResize);
 
-          // Stats Setup
-          const stats = new Stats();
-          stats.dom.style.position = "absolute";
-          stats.dom.style.top = "24px";
-          stats.dom.style.bottom = "auto";
-          stats.dom.style.right = "24px";
-          stats.dom.style.left = "auto";
-          stats.dom.style.zIndex = "100";
-          stats.dom.style.display = showStats ? "block" : "none";
-          document.body.appendChild(stats.dom);
-          statsRef.current = stats;
-
           // Raycaster for clicking objects
           const raycaster = new THREE.Raycaster();
           const mouse = new THREE.Vector2();
@@ -288,11 +294,25 @@
           );
 
           // Animation Loop
+          let frames = 0;
+          let lastTime = performance.now();
+
           const animate = () => {
             requestAnimationFrame(animate);
             controls.update();
-            if (statsRef.current) statsRef.current.update();
             renderer.render(scene, camera);
+
+            // FPS Calculation
+            frames++;
+            const now = performance.now();
+            if (now >= lastTime + 1000) {
+              const fps = Math.round(
+                (frames * 1000) / (now - lastTime),
+              );
+              setPerfStats((prev) => ({ ...prev, fps }));
+              frames = 0;
+              lastTime = now;
+            }
           };
           animate();
 
@@ -308,11 +328,110 @@
               handleMouseUp,
             );
             mountRef.current?.removeChild(renderer.domElement);
-            if (statsRef.current) {
-              document.body.removeChild(statsRef.current.dom);
-            }
           };
         }, []);
+
+        // Performance Polling (Memory, Network, GPU)
+        useEffect(() => {
+          const interval = setInterval(() => {
+            if (!showStats) return;
+
+            // Memory
+            let memory = { used: "---", total: "---", limit: "---" };
+            if (window.performance && window.performance.memory) {
+              const mem = performance.memory;
+              memory = {
+                used: mem.usedJSHeapSize
+                  ? (mem.usedJSHeapSize / 1048576).toFixed(1)
+                  : "---",
+                total: mem.totalJSHeapSize
+                  ? (mem.totalJSHeapSize / 1048576).toFixed(1)
+                  : "---",
+                limit: mem.jsHeapLimit
+                  ? (mem.jsHeapLimit / 1048576).toFixed(1)
+                  : "---",
+              };
+            }
+
+            // Network (General + Model Specific)
+            const resources = performance.getEntriesByType("resource");
+            const totalBytes = resources.reduce(
+              (acc, entry) => acc + (entry.transferSize || 0),
+              0,
+            );
+
+            const modelEntry = [...resources]
+              .reverse()
+              .find((r) =>
+                r.name.endsWith(".glb") || r.name.includes("model")
+              );
+
+            // Check if it's cached or was a small revalidation (304)
+            const isCached = modelEntry
+              ? (modelEntry.transferSize === 0 ||
+                (modelEntry.transferSize < 2000 &&
+                  modelEntry.duration < 50))
+              : false;
+
+            const network = {
+              totalMB: (totalBytes / 1048576).toFixed(2),
+              files: resources.length,
+              modelSizeMB: modelEntry
+                ? (modelEntry.decodedBodySize / 1048576).toFixed(2)
+                : 0,
+              modelTime: modelEntry
+                ? Math.round(modelEntry.duration)
+                : 0,
+              isCached: isCached,
+              isLocal: modelSourceRef.current === "local",
+            };
+
+            // GPU / Renderer Info
+            let gpu = {
+              name: "Desconhecida",
+              drawCalls: 0,
+              triangles: 0,
+              textures: 0,
+              geometries: 0,
+            };
+            if (rendererRef.current) {
+              const info = rendererRef.current.info;
+              gpu = {
+                drawCalls: info.render.calls,
+                triangles: info.render.triangles,
+                textures: info.memory.textures,
+                geometries: info.memory.geometries,
+              };
+
+              const gl = rendererRef.current.getContext();
+              const debugInfo = gl.getExtension(
+                "WEBGL_debug_renderer_info",
+              );
+              if (debugInfo) {
+                gpu.name = gl.getParameter(
+                  debugInfo.UNMASKED_RENDERER_WEBGL,
+                );
+              }
+            }
+
+            setPerfStats((prev) => ({
+              ...prev,
+              memory,
+              network,
+              gpu: { ...gpu, name: gpu.name || prev.gpu.name },
+            }));
+
+            // Send to RN for external monitoring
+            sendMessageToRN("PERF_UPDATE", {
+              fps: perfStats.fps,
+              memory,
+              network,
+              gpu,
+            });
+          }, 2000);
+
+          return () => clearInterval(interval);
+        }, [showStats, perfStats.fps]);
 
         // Listen for messages FROM React Native
         useEffect(() => {
@@ -380,14 +499,6 @@
           }
         }, [showGrid]);
 
-        useEffect(() => {
-          if (statsRef.current) {
-            statsRef.current.dom.style.display = showStats
-              ? "block"
-              : "none";
-          }
-        }, [showStats]);
-
         const loadModel = (fileOrUrl) => {
           const isUrl = typeof fileOrUrl === "string";
 
@@ -401,6 +512,7 @@
           }
 
           setIsLoading(true);
+          modelSourceRef.current = isUrl ? "url" : "local";
           sendMessageToRN("LOAD_START", {
             filename: isUrl
               ? fileOrUrl.split("/").pop()
@@ -608,7 +720,11 @@
             cameraZ *= 2.5; // Add some padding
 
             // Calculate new camera position (front view)
-            const offset = new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
+            const offset = new THREE.Vector3(
+              0,
+              maxDim * 0.6,
+              maxDim * 2.2,
+            );
 
             const newPos = center.clone().add(offset);
 
@@ -727,7 +843,92 @@
                 </div>
               </div>
 
-              ${meshes.length > 0 &&
+              ${showStats &&
+                html`
+                  <div class="perf-overlay">
+                    <div class="perf-item">
+                      <span class="perf-label">FPS</span>
+                      <span
+                        class="perf-value ${perfStats.fps >= 50
+                          ? "good"
+                          : perfStats.fps >= 30
+                          ? "warning"
+                          : "critical"}"
+                      >
+                        ${perfStats.fps}
+                      </span>
+                    </div>
+                    <div class="perf-item">
+                      <span class="perf-label">Memória</span>
+                      <span
+                        class="perf-value ${perfStats.memory.limit !==
+                              "---" &&
+                            perfStats.memory.used /
+                                  perfStats.memory.limit > 0.8
+                          ? "critical"
+                          : "good"}"
+                      >
+                        ${perfStats.memory
+                          .used}MB ${perfStats.memory.limit !== "---"
+                          ? ` / ${perfStats.memory.limit}MB`
+                          : ""}
+                      </span>
+                    </div>
+                    <div class="perf-item">
+                      <span class="perf-label">Origem</span>
+                      <span class="perf-value">
+                        ${perfStats.network.isLocal
+                          ? html`
+                            <span style="color: var(--accent-color)">Local (Upload)</span>
+                          `
+                          : perfStats.network.isCached
+                          ? html`
+                            <span class="good">Cacheado</span>
+                          `
+                          : html`
+                            Baixado (${perfStats.network.modelTime}ms)
+                          `}
+                      </span>
+                    </div>
+                    <div class="perf-divider"></div>
+                    <div class="perf-item">
+                      <span class="perf-label">Draw Calls</span>
+                      <span
+                        class="perf-value ${perfStats.gpu.drawCalls >
+                            300
+                          ? "critical"
+                          : perfStats.gpu.drawCalls > 150
+                          ? "warning"
+                          : "good"}"
+                      >
+                        ${perfStats.gpu.drawCalls}
+                      </span>
+                    </div>
+                    <div class="perf-item">
+                      <span class="perf-label">Triângulos</span>
+                      <span
+                        class="perf-value ${perfStats.gpu.triangles >
+                            500000
+                          ? "critical"
+                          : perfStats.gpu.triangles > 200000
+                          ? "warning"
+                          : "good"}"
+                      >
+                        ${(perfStats.gpu.triangles / 1000).toFixed(1)}k
+                      </span>
+                    </div>
+                    <div class="perf-divider"></div>
+                    <div class="perf-item" style="margin-top: 4px;">
+                      <span class="perf-label">GPU</span>
+                      <span
+                        class="perf-value"
+                        style="font-size: 0.65rem; text-align: right; max-width: 140px; line-height: 1.2;"
+                      >
+                        ${perfStats.gpu.name}
+                      </span>
+                    </div>
+                  </div>
+                `} ${meshes.length > 0 &&
                 showMeshList &&
                 html`
                   <div

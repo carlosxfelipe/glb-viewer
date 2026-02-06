@@ -30,6 +30,9 @@
         --text-color: #f8fafc;
         --text-muted: #94a3b8;
         --glass-border: rgba(255, 255, 255, 0.1);
+        --perf-good: #4ade80;
+        --perf-warn: #fbbf24;
+        --perf-bad: #f87171;
         --title-gradient-1: #ffffff;
         --title-gradient-2: #94a3b8;
       }
@@ -42,6 +45,9 @@
           --text-color: #0f172a;
           --text-muted: #64748b;
           --glass-border: rgba(0, 0, 0, 0.1);
+          --perf-good: #16a34a;
+          --perf-warn: #d97706;
+          --perf-bad: #dc2626;
           --title-gradient-1: #0f172a;
           --title-gradient-2: #475569;
         }
@@ -133,16 +139,21 @@
         background: rgba(255, 255, 255, 0.02);
         transition: all 0.3s ease;
         pointer-events: auto;
-        visibility: hidden;
-        opacity: 0;
+        cursor: pointer;
+        opacity: 1;
       }
 
-      .drop-zone.active {
-        visibility: visible;
-        opacity: 1;
+      .drop-zone.active,
+      .drop-zone:hover {
         border-color: var(--accent-color);
         background: rgba(59, 130, 246, 0.05);
         backdrop-filter: blur(4px);
+      }
+
+      .drop-zone.hidden {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
       }
 
       .drop-zone h3 {
@@ -328,6 +339,15 @@
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       }
 
+      @media (max-width: 600px) {
+        .hub-panel {
+          left: 50%;
+          right: auto;
+          transform: translateX(-50%);
+          bottom: 20px;
+        }
+      }
+
       .hub-btn {
         width: 44px;
         height: 44px;
@@ -425,6 +445,71 @@
           color: white;
         }
       }
+
+      /* Performance Overlay */
+      .perf-overlay {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 12px;
+        width: 220px;
+        pointer-events: none;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        animation: fadeIn 0.2s ease;
+      }
+
+      @media (max-width: 600px) {
+        .perf-overlay {
+          top: 12px;
+          right: 12px;
+          width: 200px;
+          padding: 12px;
+        }
+      }
+
+      .perf-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+      }
+
+      .perf-label {
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+
+      .perf-value {
+        color: var(--text-color);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .perf-value.warning {
+        color: var(--perf-warn);
+      }
+
+      .perf-value.good {
+        color: var(--perf-good);
+      }
+
+      .perf-value.critical {
+        color: var(--perf-bad);
+      }
+
+      .perf-divider {
+        height: 1px;
+        background: var(--glass-border);
+        margin: 2px 0;
+      }
     </style>
   </head>
   <body>
@@ -443,7 +528,6 @@
           "three/examples/jsm/loaders/DRACOLoader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/DRACOLoader.js",
           "three/examples/jsm/loaders/KTX2Loader": "https://esm.sh/three@0.160.0/examples/jsm/loaders/KTX2Loader.js",
           "three/examples/jsm/environments/RoomEnvironment": "https://esm.sh/three@0.160.0/examples/jsm/environments/RoomEnvironment.js",
-          "three/examples/jsm/libs/stats.module": "https://esm.sh/three@0.160.0/examples/jsm/libs/stats.module.js",
           "meshoptimizer": "https://esm.sh/meshoptimizer@0.21.0"
         }
       }
@@ -459,7 +543,6 @@
       import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
       import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader";
       import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment";
-      import Stats from "three/examples/jsm/libs/stats.module";
       import { MeshoptDecoder } from "meshoptimizer";
 
       function App() {
@@ -476,6 +559,16 @@
         );
         const [currentAnimation, setCurrentAnimation] = useState(null);
         const [showStats, setShowStats] = useState(false);
+        const [perfStats, setPerfStats] = useState({
+          fps: 0,
+          memory: { used: 0, total: 0, limit: 0 },
+          gpu: {
+            name: "Carregando...",
+            drawCalls: 0,
+            triangles: 0,
+            textures: 0,
+          },
+        });
 
         // Scene refs
         const sceneRef = useRef(null);
@@ -485,7 +578,6 @@
         const controlsRef = useRef(null);
         const mixerRef = useRef(null);
         const activeActionRef = useRef(null);
-        const statsRef = useRef(null);
 
         useEffect(() => {
           // Theme Detection
@@ -606,17 +698,6 @@
             if (grid) grid.visible = val;
           };
 
-          // Stats Setup
-          const stats = new Stats();
-          stats.dom.style.position = "absolute";
-          stats.dom.style.top = "auto";
-          stats.dom.style.bottom = "24px";
-          stats.dom.style.left = "24px";
-          stats.dom.style.zIndex = "100";
-          stats.dom.style.display = showStats ? "block" : "none";
-          document.body.appendChild(stats.dom);
-          statsRef.current = stats;
-
           // Resize handler
           const handleResize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -680,15 +761,29 @@
             handleMouseUp,
           );
 
-          // Animation Loop
+          // Animation Loop with FPS tracking
           const clock = new THREE.Clock();
+          let frames = 0;
+          let lastTime = performance.now();
+
           const animate = () => {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             if (mixerRef.current) mixerRef.current.update(delta);
             controls.update();
-            if (statsRef.current) statsRef.current.update();
             renderer.render(scene, camera);
+
+            // FPS Calculation
+            frames++;
+            const now = performance.now();
+            if (now >= lastTime + 1000) {
+              const fps = Math.round(
+                (frames * 1000) / (now - lastTime),
+              );
+              setPerfStats((prev) => ({ ...prev, fps }));
+              frames = 0;
+              lastTime = now;
+            }
           };
           animate();
 
@@ -704,25 +799,74 @@
               handleMouseUp,
             );
             mountRef.current?.removeChild(renderer.domElement);
-            if (statsRef.current) {
-              document.body.removeChild(statsRef.current.dom);
-            }
           };
         }, []);
+
+        // Performance Polling (Memory, Network, GPU)
+        useEffect(() => {
+          const interval = setInterval(() => {
+            if (!showStats) return;
+
+            // Memory
+            let memory = { used: "---", total: "---", limit: "---" };
+            if (window.performance && window.performance.memory) {
+              const mem = performance.memory;
+              memory = {
+                used: mem.usedJSHeapSize
+                  ? (mem.usedJSHeapSize / 1048576).toFixed(1)
+                  : "---",
+                total: mem.totalJSHeapSize
+                  ? (mem.totalJSHeapSize / 1048576).toFixed(1)
+                  : "---",
+                limit: mem.jsHeapLimit
+                  ? (mem.jsHeapLimit / 1048576).toFixed(1)
+                  : "---",
+              };
+            }
+
+            // GPU / Renderer Info
+            let gpu = {
+              name: "Desconhecida",
+              drawCalls: 0,
+              triangles: 0,
+              textures: 0,
+              geometries: 0,
+            };
+            if (rendererRef.current) {
+              const info = rendererRef.current.info;
+              gpu = {
+                drawCalls: info.render.calls,
+                triangles: info.render.triangles,
+                textures: info.memory.textures,
+                geometries: info.memory.geometries,
+              };
+
+              const gl = rendererRef.current.getContext();
+              const debugInfo = gl.getExtension(
+                "WEBGL_debug_renderer_info",
+              );
+              if (debugInfo) {
+                gpu.name = gl.getParameter(
+                  debugInfo.UNMASKED_RENDERER_WEBGL,
+                );
+              }
+            }
+
+            setPerfStats((prev) => ({
+              ...prev,
+              memory,
+              gpu: { ...gpu, name: gpu.name || prev.gpu.name },
+            }));
+          }, 2000);
+
+          return () => clearInterval(interval);
+        }, [showStats, perfStats.fps]);
 
         useEffect(() => {
           if (window._toggleGrid) {
             window._toggleGrid(showGrid);
           }
         }, [showGrid]);
-
-        useEffect(() => {
-          if (statsRef.current) {
-            statsRef.current.dom.style.display = showStats
-              ? "block"
-              : "none";
-          }
-        }, [showStats]);
 
         const loadModel = (file) => {
           if (!file || !file.name.toLowerCase().endsWith(".glb")) {
@@ -887,7 +1031,11 @@
             cameraZ *= 2.5; // Add some padding
 
             // Calculate new camera position (front view)
-            const offset = new THREE.Vector3(0, maxDim * 0.6, maxDim * 2.2);
+            const offset = new THREE.Vector3(
+              0,
+              maxDim * 0.6,
+              maxDim * 2.2,
+            );
             const newPos = center.clone().add(offset);
 
             // Set new state
@@ -998,29 +1146,6 @@
                   <p style="color: var(--text-muted); font-size: 0.8rem;">
                     ${filename || "Nenhum arquivo carregado"}
                   </p>
-                </div>
-                <div class="top-hub-panel">
-                  <button
-                    class="hub-btn"
-                    onClick="${() =>
-                      document.getElementById("file-input").click()}"
-                    data-tooltip="Abrir arquivo GLB"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    >
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                  </button>
                 </div>
                 <input
                   type="file"
@@ -1154,7 +1279,13 @@
                   </div>
                 `}
 
-              <div class="drop-zone ${isDragging ? "active" : ""}">
+              <div
+                class="drop-zone ${isDragging
+                  ? "active"
+                  : ""} ${filename ? "hidden" : ""}"
+                onClick="${() =>
+                  document.getElementById("file-input").click()}"
+              >
                 <svg
                   width="60"
                   height="60"
@@ -1170,8 +1301,8 @@
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <h3>Solte o arquivo GLB aqui</h3>
-                <p>Arraste e solte para visualizar instantaneamente</p>
+                <h3>Arraste ou clique para abrir</h3>
+                <p>Selecione um arquivo GLB para visualizar</p>
               </div>
 
               ${isLoading &&
@@ -1179,6 +1310,75 @@
                   <div class="loader-info">
                     <div class="spinner"></div>
                     <span>Carregando modelo...</span>
+                  </div>
+                `} ${showStats &&
+                html`
+                  <div class="perf-overlay">
+                    <div class="perf-item">
+                      <span class="perf-label">FPS</span>
+                      <span
+                        class="perf-value ${perfStats.fps >= 50
+                          ? "good"
+                          : perfStats.fps >= 30
+                          ? "warning"
+                          : "critical"}"
+                      >
+                        ${perfStats.fps}
+                      </span>
+                    </div>
+                    <div class="perf-item">
+                      <span class="perf-label">Memória</span>
+                      <span
+                        class="perf-value ${perfStats.memory.limit !==
+                              "---" &&
+                            perfStats.memory.used /
+                                  perfStats.memory.limit > 0.8
+                          ? "critical"
+                          : "good"}"
+                      >
+                        ${perfStats.memory
+                          .used}MB ${perfStats.memory.limit !== "---"
+                          ? ` / ${perfStats.memory.limit}MB`
+                          : ""}
+                      </span>
+                    </div>
+                    <div class="perf-divider"></div>
+                    <div class="perf-item">
+                      <span class="perf-label">Draw Calls</span>
+                      <span
+                        class="perf-value ${perfStats.gpu.drawCalls >
+                            300
+                          ? "critical"
+                          : perfStats.gpu.drawCalls > 150
+                          ? "warning"
+                          : "good"}"
+                      >
+                        ${perfStats.gpu.drawCalls}
+                      </span>
+                    </div>
+                    <div class="perf-item">
+                      <span class="perf-label">Triângulos</span>
+                      <span
+                        class="perf-value ${perfStats.gpu.triangles >
+                            500000
+                          ? "critical"
+                          : perfStats.gpu.triangles > 200000
+                          ? "warning"
+                          : "good"}"
+                      >
+                        ${(perfStats.gpu.triangles / 1000).toFixed(1)}k
+                      </span>
+                    </div>
+                    <div class="perf-divider"></div>
+                    <div class="perf-item" style="margin-top: 4px;">
+                      <span class="perf-label">GPU</span>
+                      <span
+                        class="perf-value"
+                        style="font-size: 0.65rem; text-align: right; max-width: 140px; line-height: 1.2;"
+                      >
+                        ${perfStats.gpu.name}
+                      </span>
+                    </div>
                   </div>
                 `}
 
