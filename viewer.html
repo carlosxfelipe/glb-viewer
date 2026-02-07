@@ -446,7 +446,7 @@
         border: 1px solid var(--glass-border);
         border-radius: 12px;
         padding: 12px;
-        width: 260px;
+        width: 280px;
         pointer-events: none;
         z-index: 100;
         display: flex;
@@ -460,7 +460,7 @@
         .perf-overlay {
           top: 12px;
           right: 12px;
-          width: 220px;
+          width: 260px;
           padding: 10px;
           gap: 8px;
         }
@@ -469,7 +469,7 @@
       .perf-section {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 8px;
       }
 
       .perf-section-title {
@@ -588,7 +588,7 @@
           avgFps: 0,
           minFps: 60,
           frameTime: 0,
-          memory: { used: 0, total: 0, limit: 0, usagePercent: 0 },
+          memory: { used: 0 },
           network: {
             totalMB: 0,
             files: 0,
@@ -881,33 +881,12 @@
           const interval = setInterval(() => {
             if (!showStats) return;
 
-            // Memory
-            let memory = {
-              used: 0,
-              total: 0,
-              limit: 0,
-              usagePercent: 0,
-            };
+            let memory = { used: 0 };
             if (window.performance && window.performance.memory) {
               const mem = performance.memory;
-              const used = mem.usedJSHeapSize
+              memory.used = mem.usedJSHeapSize
                 ? Math.round(mem.usedJSHeapSize / 1048576)
                 : 0;
-              const total = mem.totalJSHeapSize
-                ? Math.round(mem.totalJSHeapSize / 1048576)
-                : 0;
-              const limit = mem.jsHeapLimit
-                ? Math.round(mem.jsHeapLimit / 1048576)
-                : 0;
-
-              memory = {
-                used,
-                total,
-                limit,
-                usagePercent: (limit > 0)
-                  ? Math.min(Math.round((used / limit) * 100), 100)
-                  : 0,
-              };
             }
 
             // Network Info
@@ -1483,33 +1462,9 @@
                       <div class="perf-section-title">Memória JS</div>
                       <div class="perf-item">
                         <span class="perf-label">Uso</span>
-                        <span
-                          class="perf-value ${perfStats.memory
-                              .usagePercent > 80
-                            ? "critical"
-                            : perfStats.memory.usagePercent > 60
-                            ? "warning"
-                            : "good"}"
-                        >
-                          ${perfStats.memory
-                            .used}MB / ${perfStats.memory
-                              .limit > 0
-                            ? perfStats.memory.limit + "MB"
-                            : "N/A"}
+                        <span class="perf-value">
+                          ${perfStats.memory.used}MB
                         </span>
-                      </div>
-                      <div class="perf-bar">
-                        <div
-                          class="perf-bar-fill ${perfStats.memory
-                              .usagePercent > 80
-                            ? "critical"
-                            : perfStats.memory.usagePercent > 60
-                            ? "warning"
-                            : ""}"
-                          style="width: ${perfStats.memory
-                            .usagePercent}%"
-                        >
-                        </div>
                       </div>
                     </div>
 
