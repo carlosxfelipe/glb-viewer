@@ -426,17 +426,6 @@
         opacity: 1;
       }
 
-      .top-hub-panel {
-        background: var(--panel-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--glass-border);
-        border-radius: 100px;
-        padding: 8px;
-        pointer-events: auto;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      }
-
       @media (prefers-color-scheme: light) {
         .hub-btn:hover {
           background: rgba(0, 0, 0, 0.05);
@@ -457,39 +446,57 @@
         border: 1px solid var(--glass-border);
         border-radius: 12px;
         padding: 12px;
-        width: 220px;
+        width: 260px;
         pointer-events: none;
         z-index: 100;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 12px;
         animation: fadeIn 0.2s ease;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       }
 
       @media (max-width: 600px) {
         .perf-overlay {
           top: 12px;
           right: 12px;
-          width: 200px;
-          padding: 12px;
+          width: 220px;
+          padding: 10px;
+          gap: 8px;
         }
+      }
+
+      .perf-section {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .perf-section-title {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        font-weight: 700;
+        margin-bottom: 2px;
       }
 
       .perf-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 0.75rem;
       }
 
       .perf-label {
+        font-size: 0.75rem;
         color: var(--text-muted);
         font-weight: 500;
       }
 
       .perf-value {
-        color: var(--text-color);
+        font-size: 0.8rem;
         font-weight: 600;
+        font-family: monospace;
         font-variant-numeric: tabular-nums;
       }
 
@@ -505,10 +512,27 @@
         color: var(--perf-bad);
       }
 
-      .perf-divider {
-        height: 1px;
-        background: var(--glass-border);
-        margin: 2px 0;
+      .perf-bar {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 2px;
+      }
+
+      .perf-bar-fill {
+        height: 100%;
+        background: var(--perf-good);
+        transition: width 0.3s ease;
+      }
+
+      .perf-bar-fill.warning {
+        background: var(--perf-warn);
+      }
+
+      .perf-bar-fill.critical {
+        background: var(--perf-bad);
       }
     </style>
   </head>
@@ -561,13 +585,34 @@
         const [showStats, setShowStats] = useState(false);
         const [perfStats, setPerfStats] = useState({
           fps: 0,
-          memory: { used: 0, total: 0, limit: 0 },
+          avgFps: 0,
+          minFps: 60,
+          frameTime: 0,
+          memory: { used: 0, total: 0, limit: 0, usagePercent: 0 },
+          network: {
+            totalMB: 0,
+            files: 0,
+            modelSizeMB: 0,
+          },
           gpu: {
             name: "Carregando...",
             drawCalls: 0,
             triangles: 0,
             textures: 0,
+            geometries: 0,
           },
+          loadTime: 0,
+          modelSize: { vertices: 0, faces: 0 },
+        });
+
+        // Tracking refs for performance
+        const perfTrackingRef = useRef({
+          frames: 0,
+          lastTime: performance.now(),
+          fpsHistory: [],
+          frameTimeHistory: [],
+          lastFrameTime: performance.now(),
+          startTime: performance.now(),
         });
 
         // Scene refs
@@ -762,32 +807,61 @@
           );
 
           // Animation Loop with FPS tracking
-          const clock = new THREE.Clock();
-          let frames = 0;
-          let lastTime = performance.now();
-
+          let animationId;
           const animate = () => {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-            if (mixerRef.current) mixerRef.current.update(delta);
+            animationId = requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const tracking = perfTrackingRef.current;
+
+            // Frame time
+            const frameTime = now - tracking.lastFrameTime;
+            tracking.lastFrameTime = now;
+            tracking.frameTimeHistory.push(frameTime);
+            if (tracking.frameTimeHistory.length > 60) {
+              tracking.frameTimeHistory.shift();
+            }
+
+            if (mixerRef.current) mixerRef.current.update(0.016); // Fallback clock.getDelta() logic if needed
             controls.update();
             renderer.render(scene, camera);
 
             // FPS Calculation
-            frames++;
-            const now = performance.now();
-            if (now >= lastTime + 1000) {
+            tracking.frames++;
+            if (now >= tracking.lastTime + 1000) {
               const fps = Math.round(
-                (frames * 1000) / (now - lastTime),
+                (tracking.frames * 1000) / (now - tracking.lastTime),
               );
-              setPerfStats((prev) => ({ ...prev, fps }));
-              frames = 0;
-              lastTime = now;
+
+              tracking.fpsHistory.push(fps);
+              if (tracking.fpsHistory.length > 10) {
+                tracking.fpsHistory.shift();
+              }
+
+              const avgFps = tracking.fpsHistory.reduce((a, b) =>
+                a + b, 0) /
+                tracking.fpsHistory.length;
+              const minFps = Math.min(...tracking.fpsHistory);
+              const avgFrameTime =
+                tracking.frameTimeHistory.reduce((a, b) => a + b, 0) /
+                tracking.frameTimeHistory.length;
+
+              setPerfStats((prev) => ({
+                ...prev,
+                fps,
+                avgFps: Math.round(avgFps),
+                minFps,
+                frameTime: avgFrameTime.toFixed(1),
+              }));
+
+              tracking.frames = 0;
+              tracking.lastTime = now;
             }
           };
           animate();
 
           return () => {
+            cancelAnimationFrame(animationId);
             window.removeEventListener("resize", handleResize);
             mediaQuery.removeEventListener("change", handleThemeChange);
             renderer.domElement.removeEventListener(
@@ -808,33 +882,60 @@
             if (!showStats) return;
 
             // Memory
-            let memory = { used: "---", total: "---", limit: "---" };
+            let memory = {
+              used: 0,
+              total: 0,
+              limit: 0,
+              usagePercent: 0,
+            };
             if (window.performance && window.performance.memory) {
               const mem = performance.memory;
+              const used = mem.usedJSHeapSize
+                ? Math.round(mem.usedJSHeapSize / 1048576)
+                : 0;
+              const total = mem.totalJSHeapSize
+                ? Math.round(mem.totalJSHeapSize / 1048576)
+                : 0;
+              const limit = mem.jsHeapLimit
+                ? Math.round(mem.jsHeapLimit / 1048576)
+                : 0;
+
               memory = {
-                used: mem.usedJSHeapSize
-                  ? (mem.usedJSHeapSize / 1048576).toFixed(1)
-                  : "---",
-                total: mem.totalJSHeapSize
-                  ? (mem.totalJSHeapSize / 1048576).toFixed(1)
-                  : "---",
-                limit: mem.jsHeapLimit
-                  ? (mem.jsHeapLimit / 1048576).toFixed(1)
-                  : "---",
+                used,
+                total,
+                limit,
+                usagePercent: (limit > 0)
+                  ? Math.min(Math.round((used / limit) * 100), 100)
+                  : 0,
               };
             }
 
+            // Network Info
+            const resources = performance.getEntriesByType("resource");
+            const totalBytes = resources.reduce(
+              (acc, entry) =>
+                acc +
+                (entry.decodedBodySize || entry.transferSize || 0),
+              0,
+            );
+
+            const network = {
+              totalMB: (totalBytes / 1048576).toFixed(2),
+              files: resources.length,
+            };
+
             // GPU / Renderer Info
-            let gpu = {
-              name: "Desconhecida",
+            let rendererInfo = {
               drawCalls: 0,
               triangles: 0,
               textures: 0,
               geometries: 0,
             };
+            let gpuName = "Desconhecida";
+
             if (rendererRef.current) {
               const info = rendererRef.current.info;
-              gpu = {
+              rendererInfo = {
                 drawCalls: info.render.calls,
                 triangles: info.render.triangles,
                 textures: info.memory.textures,
@@ -846,7 +947,7 @@
                 "WEBGL_debug_renderer_info",
               );
               if (debugInfo) {
-                gpu.name = gl.getParameter(
+                gpuName = gl.getParameter(
                   debugInfo.UNMASKED_RENDERER_WEBGL,
                 );
               }
@@ -855,7 +956,14 @@
             setPerfStats((prev) => ({
               ...prev,
               memory,
-              gpu: { ...gpu, name: gpu.name || prev.gpu.name },
+              network: {
+                ...prev.network,
+                ...network,
+              },
+              gpu: {
+                ...rendererInfo,
+                name: gpuName,
+              },
             }));
           }, 2000);
 
@@ -876,6 +984,7 @@
 
           setIsLoading(true);
           setFilename(file.name);
+          perfTrackingRef.current.startTime = performance.now();
 
           // Clear previous model and free memory
           if (modelRef.current) {
@@ -941,11 +1050,26 @@
                 model.position.y += size.y / 2;
 
                 const meshList = [];
+                let vertices = 0;
+                let faces = 0;
+
                 model.traverse((node) => {
                   if (node.isMesh) {
-                    node.frustumCulled = false; // Force rendering even outside camera view to prevent parts from disappearing while rotating, but can be heavy for giant models.
+                    node.frustumCulled = false;
                     node.castShadow = true;
                     node.receiveShadow = true;
+
+                    // Model Stats
+                    const geometry = node.geometry;
+                    if (geometry.attributes.position) {
+                      vertices += geometry.attributes.position.count;
+                      if (geometry.index) {
+                        faces += geometry.index.count / 3;
+                      } else {
+                        faces += geometry.attributes.position.count / 3;
+                      }
+                    }
+
                     meshList.push({
                       name: node.name ||
                         `Desconhecido (${node.uuid.substring(0, 4)})`,
@@ -965,6 +1089,20 @@
                   maxDim * 1.5,
                 );
                 controlsRef.current.target.set(0, size.y / 2, 0);
+
+                const loadTime = ((performance.now() -
+                  perfTrackingRef.current.startTime) /
+                  1000).toFixed(2);
+
+                setPerfStats((prev) => ({
+                  ...prev,
+                  loadTime,
+                  modelSize: { vertices, faces },
+                  network: {
+                    ...prev.network,
+                    modelSizeMB: (file.size / 1048576).toFixed(2),
+                  },
+                }));
 
                 setMeshes(meshList);
 
@@ -1024,11 +1162,8 @@
             const size = new THREE.Vector3();
             box.getSize(size);
 
-            // Get distance needed to see the mesh
+            // Calculate maximum dimension for focus zoom
             const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = cameraRef.current.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-            cameraZ *= 2.5; // Add some padding
 
             // Calculate new camera position (front view)
             const offset = new THREE.Vector3(
@@ -1078,13 +1213,14 @@
           const size = new THREE.Vector3();
           box.getSize(size);
 
+          // Calculate maximum dimension for camera distance
           const maxDim = Math.max(size.x, size.y, size.z);
           cameraRef.current.position.set(
             maxDim * 1.5,
             maxDim * 1.5,
             maxDim * 1.5,
           );
-          controlsRef.current.target.set(0, size.y / 2, 0);
+          controlsRef.current.target.copy(center);
           controlsRef.current.update();
         };
 
@@ -1314,70 +1450,151 @@
                 `} ${showStats &&
                 html`
                   <div class="perf-overlay">
-                    <div class="perf-item">
-                      <span class="perf-label">FPS</span>
-                      <span
-                        class="perf-value ${perfStats.fps >= 50
-                          ? "good"
-                          : perfStats.fps >= 30
-                          ? "warning"
-                          : "critical"}"
-                      >
-                        ${perfStats.fps}
-                      </span>
+                    <!-- Rendering Section -->
+                    <div class="perf-section">
+                      <div class="perf-section-title">Renderização</div>
+                      <div class="perf-item">
+                        <span class="perf-label">FPS</span>
+                        <span
+                          class="perf-value ${perfStats.fps >= 50
+                            ? "good"
+                            : perfStats.fps >= 30
+                            ? "warning"
+                            : "critical"}"
+                        >
+                          ${perfStats.fps}
+                        </span>
+                      </div>
+                      <div class="perf-item">
+                        <span class="perf-label">FPS Médio / Mín</span>
+                        <span class="perf-value">
+                          ${perfStats.avgFps} / ${perfStats.minFps}
+                        </span>
+                      </div>
+                      <div class="perf-item">
+                        <span class="perf-label">Frame Time</span>
+                        <span class="perf-value">${perfStats
+                          .frameTime}ms</span>
+                      </div>
                     </div>
-                    <div class="perf-item">
-                      <span class="perf-label">Memória</span>
-                      <span
-                        class="perf-value ${perfStats.memory.limit !==
-                              "---" &&
-                            perfStats.memory.used /
-                                  perfStats.memory.limit > 0.8
-                          ? "critical"
-                          : "good"}"
-                      >
-                        ${perfStats.memory
-                          .used}MB ${perfStats.memory.limit !== "---"
-                          ? ` / ${perfStats.memory.limit}MB`
-                          : ""}
-                      </span>
+
+                    <!-- Memory Section -->
+                    <div class="perf-section">
+                      <div class="perf-section-title">Memória JS</div>
+                      <div class="perf-item">
+                        <span class="perf-label">Uso</span>
+                        <span
+                          class="perf-value ${perfStats.memory
+                              .usagePercent > 80
+                            ? "critical"
+                            : perfStats.memory.usagePercent > 60
+                            ? "warning"
+                            : "good"}"
+                        >
+                          ${perfStats.memory
+                            .used}MB / ${perfStats.memory
+                              .limit > 0
+                            ? perfStats.memory.limit + "MB"
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div class="perf-bar">
+                        <div
+                          class="perf-bar-fill ${perfStats.memory
+                              .usagePercent > 80
+                            ? "critical"
+                            : perfStats.memory.usagePercent > 60
+                            ? "warning"
+                            : ""}"
+                          style="width: ${perfStats.memory
+                            .usagePercent}%"
+                        >
+                        </div>
+                      </div>
                     </div>
-                    <div class="perf-divider"></div>
-                    <div class="perf-item">
-                      <span class="perf-label">Draw Calls</span>
-                      <span
-                        class="perf-value ${perfStats.gpu.drawCalls >
-                            300
-                          ? "critical"
-                          : perfStats.gpu.drawCalls > 150
-                          ? "warning"
-                          : "good"}"
-                      >
-                        ${perfStats.gpu.drawCalls}
-                      </span>
+
+                    <!-- Scene Section -->
+                    <div class="perf-section">
+                      <div class="perf-section-title">Cena</div>
+                      <div class="perf-item">
+                        <span class="perf-label">Draw Calls</span>
+                        <span
+                          class="perf-value ${perfStats.gpu.drawCalls >
+                              300
+                            ? "critical"
+                            : perfStats.gpu.drawCalls > 150
+                            ? "warning"
+                            : "good"}"
+                        >
+                          ${perfStats.gpu.drawCalls}
+                        </span>
+                      </div>
+                      <div class="perf-item">
+                        <span class="perf-label">Triângulos</span>
+                        <span class="perf-value">
+                          ${(perfStats.gpu.triangles / 1000).toFixed(
+                            1,
+                          )}k
+                        </span>
+                      </div>
+                      <div class="perf-item">
+                        <span class="perf-label">Texturas / Geometrias</span>
+                        <span class="perf-value">
+                          ${perfStats.gpu.textures} / ${perfStats.gpu
+                            .geometries}
+                        </span>
+                      </div>
                     </div>
-                    <div class="perf-item">
-                      <span class="perf-label">Triângulos</span>
-                      <span
-                        class="perf-value ${perfStats.gpu.triangles >
-                            500000
-                          ? "critical"
-                          : perfStats.gpu.triangles > 200000
-                          ? "warning"
-                          : "good"}"
-                      >
-                        ${(perfStats.gpu.triangles / 1000).toFixed(1)}k
-                      </span>
+
+                    <!-- Model Section -->
+                    <div class="perf-section">
+                      <div class="perf-section-title">Modelo</div>
+                      ${perfStats.modelSize &&
+                        perfStats.modelSize.vertices > 0 &&
+                        html`
+                          <div class="perf-item">
+                            <span class="perf-label">Vértices / Faces</span>
+                            <span class="perf-value">
+                              ${(perfStats.modelSize.vertices / 1000)
+                                .toFixed(
+                                  1,
+                                )}k / ${(perfStats.modelSize.faces /
+                                  1000).toFixed(1)}k
+                            </span>
+                          </div>
+                        `}
+                      <div class="perf-item">
+                        <span class="perf-label">Tamanho do Arquivo</span>
+                        <span class="perf-value">${perfStats.network
+                          .modelSizeMB}MB</span>
+                      </div>
+                      <div class="perf-item">
+                        <span class="perf-label">Recursos (CDN)</span>
+                        <span class="perf-value">${perfStats.network
+                          .totalMB}MB (${perfStats.network
+                          .files} arq)</span>
+                      </div>
+                      <div class="perf-item">
+                        <span class="perf-label">Tempo Load</span>
+                        <span class="perf-value">${perfStats
+                          .loadTime}s</span>
+                      </div>
                     </div>
-                    <div class="perf-divider"></div>
-                    <div class="perf-item" style="margin-top: 4px;">
-                      <span class="perf-label">GPU</span>
-                      <span
-                        class="perf-value"
-                        style="font-size: 0.65rem; text-align: right; max-width: 140px; line-height: 1.2;"
+
+                    <!-- GPU Section -->
+                    <div class="perf-section">
+                      <div class="perf-section-title">GPU</div>
+                      <div
+                        class="perf-item"
+                        style="align-items: flex-start; flex-direction: column; gap: 4px;"
                       >
-                        ${perfStats.gpu.name}
-                      </span>
+                        <span
+                          class="perf-value"
+                          style="font-size: 0.65rem; line-height: 1.3; word-break: break-word; font-family: sans-serif;"
+                        >
+                          ${perfStats.gpu.name}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 `}
