@@ -286,6 +286,10 @@ html {
     bottom: 20px;
     bottom: max(20px, env(safe-area-inset-bottom));
   }
+  #home-btn,
+  #perf-toggle-btn {
+    display: none;
+  }
 }
 
 .hub-btn {

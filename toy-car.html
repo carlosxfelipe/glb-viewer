@@ -79,6 +79,7 @@
         const [showMeshList, setShowMeshList] = useState(true);
         const [focusedInfo, setFocusedInfo] = useState(null);
         const [showStats, setShowStats] = useState(false);
+        const [isPerformance, setIsPerformance] = useState(false);
         const [perfStats, setPerfStats] = useState({
           fps: 0,
           avgFps: 0,
@@ -150,19 +151,27 @@
           cameraRef.current = camera;
 
           const renderer = new THREE.WebGLRenderer({
-            antialias: true,
+            antialias: !isPerformance,
             alpha: true,
-            logarithmicDepthBuffer: true,
+            stencil: !isPerformance,
+            logarithmicDepthBuffer: true, // Crucial to avoid flickering (Z-fighting) on overlapping surfaces
+            powerPreference: isPerformance
+              ? "high-performance"
+              : "default",
           });
           renderer.setSize(window.innerWidth, window.innerHeight);
 
-          // Optimization: cap pixel ratio on mobile to 2.0 (often default 3.0+ is overkill for performance)
-          const pixelRatio = Math.min(window.devicePixelRatio, 2);
+          // PERFORMANCE: Values slightly above 1.0 help with aliasing without being as heavy as 2.0+
+          const pixelRatio = isPerformance
+            ? Math.min(window.devicePixelRatio, 1.5)
+            : Math.min(window.devicePixelRatio, 2);
           renderer.setPixelRatio(pixelRatio);
 
           // Color Management
           renderer.outputColorSpace = THREE.SRGBColorSpace;
-          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMapping = isPerformance
+            ? THREE.NoToneMapping // Tone mapping is expensive on mobile devices
+            : THREE.ACESFilmicToneMapping;
           renderer.toneMappingExposure = 0.8;
 
           mountRef.current.appendChild(renderer.domElement);
@@ -186,7 +195,7 @@
           const hemisphereLight = new THREE.HemisphereLight(
             0xffffff,
             0x444444,
-            1.0,
+            isPerformance ? 0.6 : 1.0,
           );
           scene.add(hemisphereLight);
 
@@ -370,8 +379,31 @@
               handleMouseUp,
             );
             mountRef.current?.removeChild(renderer.domElement);
+            renderer.dispose();
           };
-        }, []);
+        }, [isPerformance]);
+
+        // Re-apply performance settings to model when toggled
+        useEffect(() => {
+          if (!modelRef.current) return;
+          modelRef.current.traverse((node) => {
+            if (node.isMesh) {
+              node.castShadow = !isPerformance;
+              node.receiveShadow = !isPerformance;
+
+              if (isPerformance) {
+                node.matrixAutoUpdate = false;
+                node.updateMatrix();
+              } else {
+                node.matrixAutoUpdate = true;
+              }
+
+              if (node.material) {
+                node.material.needsUpdate = true;
+              }
+            }
+          });
+        }, [isPerformance, meshes]);
 
         // Performance Polling (Memory, Network, GPU)
         useEffect(() => {
@@ -532,7 +564,7 @@
           );
 
           loadModel(targetPath);
-        }, []);
+        }, [isPerformance]);
 
         useEffect(() => {
           if (window._toggleGrid) {
@@ -633,8 +665,13 @@
 
             model.traverse((node) => {
               if (node.isMesh) {
-                node.castShadow = true;
-                node.receiveShadow = true;
+                node.castShadow = !isPerformance;
+                node.receiveShadow = !isPerformance;
+
+                if (isPerformance) {
+                  node.matrixAutoUpdate = false; // PERFORMANCE: Disable matrix updates for static objects
+                  node.updateMatrix(); // Update once manually
+                }
 
                 // Model Stats
                 const geometry = node.geometry;
@@ -1219,6 +1256,26 @@
                     <line x1="18" y1="20" x2="18" y2="10"></line>
                     <line x1="12" y1="20" x2="12" y2="4"></line>
                     <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                </button>
+                <button
+                  class="hub-btn ${isPerformance ? "active" : ""}"
+                  data-tooltip="${isPerformance
+                    ? "Desativar Modo Performance"
+                    : "Ativar Modo Performance"}"
+                  onClick="${() => setIsPerformance(!isPerformance)}"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                   </svg>
                 </button>
                 <button
